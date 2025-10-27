@@ -1,0 +1,71 @@
+{
+  "name": "zphotozoom",
+  "version": "2.0.0",
+  "description": "A modern, lightweight TypeScript library for interactive image zoom viewers with touch and mouse support",
+  "main": "dist/photo-zoom.cjs.js",
+  "module": "dist/photo-zoom.esm.js",
+  "types": "dist/photo-zoom.d.ts",
+  "unpkg": "dist/photo-zoom.umd.js",
+  "jsdelivr": "dist/photo-zoom.umd.js",
+  "files": [
+    "dist",
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build",
+    "docs": "typedoc --out docs src/photo-zoom.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AMGHAR-AS/zPhotoZoom.git"
+  },
+  "keywords": [
+    "image",
+    "zoom",
+    "viewer",
+    "gallery",
+    "lightbox",
+    "pinch-to-zoom",
+    "touch",
+    "gesture",
+    "typescript",
+    "responsive",
+    "mobile-friendly"
+  ],
+  "author": "AMGHAR Abdeslam",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AMGHAR-AS/zPhotoZoom/issues"
+  },
+  "homepage": "https://github.com/AMGHAR-AS/zPhotoZoom#readme",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.1.0",
+    "terser": "^5.44.0",
+    "typedoc": "^0.25.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0",
+    "jsdom": "^27.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

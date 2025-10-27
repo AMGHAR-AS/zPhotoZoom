@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>zPhotoZoom - Interactive Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 60px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+
+    .controls {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin-bottom: 40px;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .image-card {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .image-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .image-card img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .image-info {
+      padding: 20px;
+    }
+
+    .image-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .image-description {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .demo-section {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin-bottom: 40px;
+    }
+
+    .demo-section h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 2rem;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .demo-item {
+      position: relative;
+      padding-bottom: 75%;
+      overflow: hidden;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .demo-item:hover {
+      transform: scale(1.05);
+    }
+
+    .demo-item img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .bg-demo {
+      height: 400px;
+      background-size: cover;
+      background-position: center;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .bg-demo:hover {
+      transform: scale(1.02);
+    }
+
+    .status {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    .status strong {
+      color: #667eea;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin-top: 60px;
+      opacity: 0.8;
+    }
+
+    code {
+      background: #f5f5f5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #e83e8c;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      .gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .control-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📸 zPhotoZoom</h1>
+      <p class="subtitle">Interactive Image Zoom Library - Demo & Examples</p>
+    </header>
+
+    <!-- Controls -->
+    <div class="controls">
+      <h3 style="margin-bottom: 20px;">Viewer Controls</h3>
+      <div class="control-group">
+        <button onclick="viewerInstance.reset()">🔄 Reset Zoom</button>
+        <button onclick="viewerInstance.close()">❌ Close Viewer</button>
+        <button onclick="viewerInstance.stop(); updateStatus()">⏸️ Stop Interactions</button>
+        <button onclick="viewerInstance.resume(); updateStatus()">▶️ Resume Interactions</button>
+        <button onclick="viewerInstance.change('.demo-item img')">🔀 Change to Grid Images</button>
+      </div>
+      <div class="status" id="status">
+        <strong>Status:</strong> Ready to zoom! Click any image to open the viewer.
+      </div>
+    </div>
+
+    <!-- Main Gallery -->
+    <div class="demo-section">
+      <h2>Gallery Images (Click to Zoom)</h2>
+      <div class="gallery">
+        <div class="image-card">
+          <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800"
+               class="zoomable"
+               alt="Mountain Landscape">
+        </div>
+
+        <div class="image-card">
+          <img src="https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800"
+               class="zoomable"
+               alt="Ocean Sunset">
+        </div>
+
+        <div class="image-card">
+          <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800"
+               class="zoomable"
+               alt="Forest Path">
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid Demo -->
+    <div class="demo-section">
+      <h2>Grid Layout Demo</h2>
+      <div class="demo-grid">
+        <div class="demo-item">
+          <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=600"
+               class="demo-item-image"
+               alt="Coastal View">
+        </div>
+        <div class="demo-item">
+          <img src="https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=600"
+               class="demo-item-image"
+               alt="City Skyline">
+        </div>
+        <div class="demo-item">
+          <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600"
+               class="demo-item-image"
+               alt="Forest">
+        </div>
+        <div class="demo-item">
+          <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600"
+               class="demo-item-image"
+               alt="Nature">
+        </div>
+      </div>
+    </div>
+
+    <!-- Background Image Demo -->
+    <div class="demo-section">
+      <h2>Background Image Demo</h2>
+      <div class="bg-demo"
+           style="background-image: url('https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=1200')">
+      </div>
+      <p style="margin-top: 15px; color: #666;">
+        zPhotoZoom also works with CSS <code>background-image</code> properties!
+      </p>
+    </div>
+
+    <footer>
+      <p>zPhotoZoom v2.0.0 | Open Source under MIT License</p>
+      <p style="margin-top: 10px;">
+        📚 <a href="https://github.com/AMGHAR-AS/zPhotoZoom"
+              style="color: white; text-decoration: underline;">
+          View Documentation
+        </a>
+      </p>
+    </footer>
+  </div>
+  <script src="../dist/photo-zoom.js"></script>
+
+  <!-- Include zPhotoZoom Library -->
+  <script type="module">
+    // In production, use: import zPhotoZoom from 'photo-zoom';
+    // For this demo, we'll create a simple initialization
+
+    // Update status display
+    function updateStatus(message) {
+      const status = document.getElementById('status');
+      const timestamp = new Date().toLocaleTimeString();
+      status.innerHTML = `<strong>Status:</strong> ${message || 'Ready to zoom!'} <em>(${timestamp})</em>`;
+    }
+
+    /**
+     * zPhotoZoom Initialization Example
+     *
+     * This demonstrates how to use zPhotoZoom in your application
+     */
+
+    // Initialize zPhotoZoom
+    const viewerInstance = new zPhotoZoom({
+      el: '.zoomable',
+      min: 0.5,
+      max: 5
+    });
+
+    // Make it available globally for button clicks
+    window.viewerInstance = viewerInstance;
+
+    // Register event callbacks
+    viewerInstance.onOpen((event) => {
+      console.log('Image viewer opened:', event.target);
+      updateStatus('Viewer opened');
+    });
+
+    viewerInstance.onClose((event) => {
+      console.log('Image viewer closed');
+      updateStatus('Viewer closed');
+    });
+
+    window.updateStatus = updateStatus;
+
+    // Log instructions
+    console.log(`
+╔════════════════════════════════════════╗
+║        zPhotoZoom Demo Loaded          ║
+╠════════════════════════════════════════╣
+║ Click any image to open the viewer    ║
+║ Use mouse wheel to zoom in/out        ║
+║ Drag to pan around the image          ║
+║ On mobile: pinch to zoom              ║
+╚════════════════════════════════════════╝
+    `);
+
+    console.log('💡 Tip: Open DevTools to see zPhotoZoom logs and interactions');
+
+    // Add click effect to demo images
+    document.querySelectorAll('.image-card, .demo-item, .bg-demo').forEach(el => {
+      el.addEventListener('click', function() {
+        console.log('Image clicked:', this);
+        updateStatus('Image clicked - viewer would open here');
+      });
+    });
+  </script>
+</body>
+</html>
