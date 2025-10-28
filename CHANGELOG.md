@@ -145,7 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Links
 
 - [GitHub Repository](https://github.com/AMGHAR-AS/zPhotoZoom)
-- [npm Package](https://www.npmjs.com/package/zPhotoZoom)
+- [npm Package](https://www.npmjs.com/package/zphotozoom)
 - [Documentation](https://github.com/AMGHAR-AS/zPhotoZoom#readme)
 - [Issues](https://github.com/AMGHAR-AS/zPhotoZoom/issues)
 
