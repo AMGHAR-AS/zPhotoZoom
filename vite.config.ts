@@ -14,7 +14,7 @@ export default defineConfig({
   build: {
     lib: {
       // Entry point
-      entry: resolve(__dirname, 'src/photo-zoom.ts'),
+      entry: resolve(__dirname, 'src/zphotozoom.ts'),
 
       // Library name (used in UMD build)
       name: 'zPhotoZoom',
@@ -23,15 +23,15 @@ export default defineConfig({
       fileName: (format) => {
         switch (format) {
           case 'es':
-            return 'photo-zoom.esm.js';
+            return 'zphotozoom.esm.js';
           case 'umd':
-            return 'photo-zoom.umd.js';
+            return 'zphotozoom.umd.js';
           case 'cjs':
-            return 'photo-zoom.cjs.js';
+            return 'zphotozoom.cjs.js';
           case 'iife':
-            return 'photo-zoom.js'; // Default standalone version
+            return 'zphotozoom.js'; // Default standalone version
           default:
-            return `photo-zoom.${format}.js`;
+            return `zphotozoom.${format}.js`;
         }
       },
 

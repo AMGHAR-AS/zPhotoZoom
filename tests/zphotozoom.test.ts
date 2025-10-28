@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import zPhotoZoom from '../src/photo-zoom';
+import zPhotoZoom from '../src/zphotozoom';
 
 // Mock DOM environment
 const setupDOM = () => {

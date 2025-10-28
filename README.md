@@ -47,7 +47,7 @@ yarn add zphotozoom
   <img src="image.jpg" class="zoomable" alt="Zoomable Image">
   
   <script type="module">
-    import zPhotoZoom from 'photo-zoom';
+    import zPhotoZoom from 'zphotozoom';
     
     const viewer = new zPhotoZoom({
       el: '.zoomable',
@@ -62,7 +62,7 @@ yarn add zphotozoom
 ### With TypeScript
 
 ```typescript
-import zPhotoZoom, { zPhotoZoomOptions, ViewerEvent } from 'photo-zoom';
+import zPhotoZoom, { zPhotoZoomOptions, ViewerEvent } from 'zphotozoom';
 
 const options: zPhotoZoomOptions = {
   el: '.gallery-image',
@@ -181,7 +181,7 @@ viewer.change('.new-selector');
 </div>
 
 <script type="module">
-  import zPhotoZoom from 'photo-zoom';
+  import zPhotoZoom from 'zphotozoom';
   
   const gallery = new zPhotoZoom({
     el: '.zoomable',
@@ -199,7 +199,7 @@ viewer.change('.new-selector');
 </div>
 
 <script type="module">
-  import zPhotoZoom from 'photo-zoom';
+  import zPhotoZoom from 'zphotozoom';
   
   const container = document.getElementById('image-container');
   
@@ -213,7 +213,7 @@ viewer.change('.new-selector');
 ### Dynamic Image Loading
 
 ```typescript
-import zPhotoZoom from 'photo-zoom';
+import zPhotoZoom from 'zphotozoom';
 
 const viewer = new zPhotoZoom({ el: '.dynamic-image' });
 
@@ -238,7 +238,7 @@ fetch('/api/images')
 ### Event Handling
 
 ```typescript
-import zPhotoZoom from 'photo-zoom';
+import zPhotoZoom from 'zphotozoom';
 
 const viewer = new zPhotoZoom({ el: '.image' });
 
@@ -261,7 +261,7 @@ viewer.onClose((event) => {
 ### Programmatic Control
 
 ```typescript
-import zPhotoZoom from 'photo-zoom';
+import zPhotoZoom from 'zphotozoom';
 
 const viewer = new zPhotoZoom({ el: '.controlled-image' });
 

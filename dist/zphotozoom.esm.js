@@ -1054,4 +1054,4 @@ export {
   zPhotoZoom as default,
   zPhotoZoom
 };
-//# sourceMappingURL=photo-zoom.esm.js.map
+//# sourceMappingURL=zphotozoom.esm.js.map

@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 2. **TypeScript Types**
    ```typescript
    // If using TypeScript, import types
-   import zPhotoZoom, { zPhotoZoomOptions, ViewerEvent } from 'photo-zoom';
+   import zPhotoZoom, { zPhotoZoomOptions, ViewerEvent } from 'zphotozoom';
    ```
 
 3. **CSS Loading**
@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 1. **Update imports**
    ```typescript
    // Add type imports if using TypeScript
-   import zPhotoZoom, { PhotoZoomOptions } from 'photo-zoom';
+   import zPhotoZoom, { PhotoZoomOptions } from 'zphotozoom';
    ```
 
 2. **Add type annotations**

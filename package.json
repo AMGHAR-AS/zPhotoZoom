@@ -1,12 +1,12 @@
 {
   "name": "zphotozoom",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "A modern, lightweight TypeScript library for interactive image zoom viewers with touch and mouse support",
-  "main": "dist/photo-zoom.cjs.js",
-  "module": "dist/photo-zoom.esm.js",
-  "types": "dist/photo-zoom.d.ts",
-  "unpkg": "dist/photo-zoom.umd.js",
-  "jsdelivr": "dist/photo-zoom.umd.js",
+  "main": "dist/zphotozoom.cjs.js",
+  "module": "dist/zphotozoom.esm.js",
+  "types": "dist/zphotozoom.d.ts",
+  "unpkg": "dist/zphotozoom.umd.js",
+  "jsdelivr": "dist/zphotozoom.umd.js",
   "files": [
     "dist",
     "src",
@@ -25,7 +25,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "prepublishOnly": "npm run build",
-    "docs": "typedoc --out docs src/photo-zoom.ts"
+    "docs": "typedoc --out docs src/zphotozoom.ts"
   },
   "repository": {
     "type": "git",
