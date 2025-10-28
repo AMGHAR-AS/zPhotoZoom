@@ -24,13 +24,13 @@ A modern, lightweight TypeScript library for creating interactive image zoom vie
 ### NPM
 
 ```bash
-npm install zPhotZoom
+npm install zphotozoom
 ```
 
 ### Yarn
 
 ```bash
-yarn add zPhotZoom
+yarn add zphotozoom
 ```
 
 ## 🚀 Quick Start
