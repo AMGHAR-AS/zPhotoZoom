@@ -21,11 +21,11 @@ var __publicField = (obj, key, value) => __defNormalProp(obj, key + "", value);
  * @author AMGHAR Abdeslam
  */
 const injectStyles = () => {
-  if (document.getElementById("photo-zoom-styles")) {
+  if (document.getElementById("z-photo-zoom-styles")) {
     return;
   }
   const styleElement = document.createElement("style");
-  styleElement.id = "photo-zoom-styles";
+  styleElement.id = "z-photo-zoom-styles";
   styleElement.textContent = `
     .ZPhotoZoom {
       position: fixed;
