@@ -1,6 +1,6 @@
 {
   "name": "zphotozoom",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A modern, lightweight TypeScript library for interactive image zoom viewers with touch and mouse support",
   "main": "dist/photo-zoom.cjs.js",
   "module": "dist/photo-zoom.esm.js",
