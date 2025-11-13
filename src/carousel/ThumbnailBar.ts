@@ -1,0 +1,232 @@
+/**
+ * Thumbnail Bar Component for zPhotoZoom Carousel
+ *
+ * @module carousel/ThumbnailBar
+ * @license MIT
+ */
+
+import type { ThumbnailBarOptions, IThumbnailBar, ImageDataExtended } from './CarouselTypes';
+
+/**
+ * ThumbnailBar - Displays a scrollable bar of image thumbnails
+ *
+ * @example
+ * ```typescript
+ * const thumbnailBar = new ThumbnailBar({
+ *   images: imageArray,
+ *   position: 'bottom',
+ *   height: 120,
+ *   visibleCount: 5,
+ *   currentIndex: 0,
+ *   onThumbnailClick: (index) => carousel.goTo(index)
+ * });
+ *
+ * const barElement = thumbnailBar.render();
+ * container.appendChild(barElement);
+ * ```
+ */
+export class ThumbnailBar implements IThumbnailBar {
+  private options: ThumbnailBarOptions;
+  private container: HTMLElement | null = null;
+  private track: HTMLElement | null = null;
+  private thumbnails: HTMLElement[] = [];
+  private currentIndex: number;
+
+  constructor(options: ThumbnailBarOptions) {
+    this.options = options;
+    this.currentIndex = options.currentIndex;
+  }
+
+  /**
+   * Render the thumbnail bar
+   */
+  public render(): HTMLElement {
+    // Create container
+    this.container = document.createElement('div');
+    this.container.className = `zpz-thumbnail-bar zpz-tb-${this.options.position}`;
+    this.container.style.height = `${this.options.height}px`;
+
+    // Create wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'zpz-tb-container';
+    this.container.appendChild(wrapper);
+
+    // Create scrollable track
+    this.track = document.createElement('div');
+    this.track.className = 'zpz-tb-track';
+    wrapper.appendChild(this.track);
+
+    // Create thumbnails
+    this.options.images.forEach((image, index) => {
+      const thumbnailEl = this.createThumbnail(image, index);
+      this.thumbnails.push(thumbnailEl);
+      this.track!.appendChild(thumbnailEl);
+    });
+
+    // Set initial active state
+    this.setActive(this.currentIndex);
+
+    return this.container;
+  }
+
+  /**
+   * Create a single thumbnail element
+   */
+  private createThumbnail(image: ImageDataExtended, index: number): HTMLElement {
+    const item = document.createElement('div');
+    item.className = 'zpz-tb-item';
+    item.setAttribute('data-index', index.toString());
+    item.setAttribute('role', 'button');
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('aria-label', `View image ${index + 1}`);
+
+    // Calculate thumbnail size based on position
+    const isHorizontal = this.options.position === 'top' || this.options.position === 'bottom';
+    const thumbnailSize = isHorizontal
+      ? this.options.height - 20 // Leave padding
+      : this.options.height; // For vertical, use height as width
+
+    if (isHorizontal) {
+      item.style.width = `${thumbnailSize}px`;
+    } else {
+      item.style.height = `${thumbnailSize}px`;
+    }
+
+    // Create img element
+    const img = document.createElement('img');
+    img.src = image.thumbnailSrc || image.src;
+    img.alt = `Thumbnail ${index + 1}`;
+    img.draggable = false;
+    img.style.pointerEvents = 'none';
+    item.appendChild(img);
+
+    // Add click handler
+    item.addEventListener('click', () => {
+      this.options.onThumbnailClick(index);
+    });
+
+    // Add keyboard handler
+    item.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this.options.onThumbnailClick(index);
+      }
+    });
+
+    return item;
+  }
+
+  /**
+   * Set the active thumbnail
+   */
+  public setActive(index: number): void {
+    if (index < 0 || index >= this.thumbnails.length) {
+      return;
+    }
+
+    // Remove active class from current
+    if (this.currentIndex >= 0 && this.currentIndex < this.thumbnails.length) {
+      this.thumbnails[this.currentIndex].classList.remove('zpz-tb-active');
+      this.thumbnails[this.currentIndex].setAttribute('aria-selected', 'false');
+    }
+
+    // Add active class to new
+    this.thumbnails[index].classList.add('zpz-tb-active');
+    this.thumbnails[index].setAttribute('aria-selected', 'true');
+
+    this.currentIndex = index;
+
+    // Scroll to active
+    this.scrollToActive();
+  }
+
+  /**
+   * Scroll to the active thumbnail
+   */
+  public scrollToActive(): void {
+    if (!this.track || !this.container || this.currentIndex < 0) {
+      return;
+    }
+
+    const activeThumbnail = this.thumbnails[this.currentIndex];
+    if (!activeThumbnail) {
+      return;
+    }
+
+    const isHorizontal = this.options.position === 'top' || this.options.position === 'bottom';
+
+    if (isHorizontal) {
+      this.scrollHorizontal(activeThumbnail);
+    } else {
+      this.scrollVertical(activeThumbnail);
+    }
+  }
+
+  /**
+   * Scroll horizontally to center active thumbnail
+   */
+  private scrollHorizontal(activeThumbnail: HTMLElement): void {
+    const containerWidth = this.container!.offsetWidth;
+    const thumbnailWidth = activeThumbnail.offsetWidth;
+    const thumbnailLeft = activeThumbnail.offsetLeft;
+
+    // Calculate position to center the thumbnail
+    const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
+
+    // Apply smooth scroll
+    this.track!.style.transition = 'transform 0.3s ease';
+    this.track!.style.transform = `translateX(-${Math.max(0, scrollPosition)}px)`;
+  }
+
+  /**
+   * Scroll vertically to center active thumbnail
+   */
+  private scrollVertical(activeThumbnail: HTMLElement): void {
+    const containerHeight = this.container!.offsetHeight;
+    const thumbnailHeight = activeThumbnail.offsetHeight;
+    const thumbnailTop = activeThumbnail.offsetTop;
+
+    // Calculate position to center the thumbnail
+    const scrollPosition = thumbnailTop - (containerHeight / 2) + (thumbnailHeight / 2);
+
+    // Apply smooth scroll
+    this.track!.style.transition = 'transform 0.3s ease';
+    this.track!.style.transform = `translateY(-${Math.max(0, scrollPosition)}px)`;
+  }
+
+  /**
+   * Update the thumbnail bar with new images
+   */
+  public update(images: ImageDataExtended[]): void {
+    if (!this.track) {
+      return;
+    }
+
+    // Clear existing thumbnails
+    this.track.innerHTML = '';
+    this.thumbnails = [];
+
+    // Create new thumbnails
+    images.forEach((image, index) => {
+      const thumbnailEl = this.createThumbnail(image, index);
+      this.thumbnails.push(thumbnailEl);
+      this.track!.appendChild(thumbnailEl);
+    });
+
+    // Reset active state
+    this.setActive(0);
+  }
+
+  /**
+   * Destroy the thumbnail bar
+   */
+  public destroy(): void {
+    if (this.container && this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
+
+    this.container = null;
+    this.track = null;
+    this.thumbnails = [];
+  }
+}

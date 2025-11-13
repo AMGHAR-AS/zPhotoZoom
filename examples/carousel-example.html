@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>zPhotoZoom Carousel - Interactive Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 60px;
+    }
+
+    h1 {
+      font-size: 3.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      font-size: 1.3rem;
+      opacity: 0.9;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      margin: 5px;
+      backdrop-filter: blur(10px);
+    }
+
+    .controls {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin-bottom: 40px;
+    }
+
+    .controls h3 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .control-section {
+      margin-bottom: 25px;
+    }
+
+    .control-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: #48bb78;
+    }
+
+    button.secondary:hover {
+      background: #38a169;
+    }
+
+    button.danger {
+      background: #f56565;
+    }
+
+    button.danger:hover {
+      background: #e53e3e;
+    }
+
+    .gallery {
+      background: white;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      margin-bottom: 40px;
+    }
+
+    .gallery h2 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 25px;
+    }
+
+    .gallery-item {
+      position: relative;
+      padding-bottom: 75%;
+      overflow: hidden;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+
+    .gallery-item:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .gallery-item img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .status {
+      background: #f0f0f0;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      border-left: 4px solid #667eea;
+    }
+
+    .status strong {
+      color: #667eea;
+    }
+
+    .info-box {
+      background: #e6f2ff;
+      border: 2px solid #667eea;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .info-box h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+    }
+
+    .info-box ul {
+      margin-left: 20px;
+      line-height: 1.8;
+      color: #333;
+    }
+
+    .info-box code {
+      background: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: #e83e8c;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin-top: 60px;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      .gallery-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .control-group {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎠 zPhotoZoom Carousel</h1>
+      <p class="subtitle">Interactive Image Gallery with Navigation & Zoom</p>
+      <div>
+        <span class="badge">📱 Touch & Swipe</span>
+        <span class="badge">⌨️ Keyboard</span>
+        <span class="badge">🎬 Transitions</span>
+        <span class="badge">🖼️ Thumbnails</span>
+      </div>
+    </header>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      <h4>🎯 How to Use:</h4>
+      <ul>
+        <li><strong>Click any image</strong> to open the carousel viewer</li>
+        <li><strong>Arrow keys (← →)</strong> to navigate between images</li>
+        <li><strong>Mouse wheel</strong> to zoom in/out</li>
+        <li><strong>Drag</strong> to pan around zoomed images</li>
+        <li><strong>Swipe</strong> on mobile to navigate (when not zoomed)</li>
+        <li><strong>Click thumbnails</strong> to jump to specific images</li>
+        <li><strong>Escape</strong> to close the viewer</li>
+        <li><strong>Home/End</strong> to jump to first/last image</li>
+      </ul>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <h3>🎮 Carousel Controls</h3>
+
+      <div class="control-section">
+        <span class="control-label">Navigation:</span>
+        <div class="control-group">
+          <button onclick="carousel.first()">⏮️ First</button>
+          <button onclick="carousel.previous()">⬅️ Previous</button>
+          <button onclick="carousel.next()">➡️ Next</button>
+          <button onclick="carousel.last()">⏭️ Last</button>
+          <button onclick="carousel.goTo(3)">↗️ Go to #4</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <span class="control-label">Slideshow:</span>
+        <div class="control-group">
+          <button class="secondary" onclick="carousel.play()">▶️ Play</button>
+          <button class="danger" onclick="carousel.pause()">⏸️ Pause</button>
+          <button onclick="carousel.togglePlay()">⏯️ Toggle</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <span class="control-label">Information:</span>
+        <div class="control-group">
+          <button onclick="showCurrentIndex()">📍 Current Index</button>
+          <button onclick="showTotalImages()">🔢 Total Images</button>
+          <button onclick="showPlayingState()">🎬 Playing State</button>
+        </div>
+      </div>
+
+      <div class="status" id="status">
+        <strong>Status:</strong> Ready! Click any image to start.
+      </div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery">
+      <h2>📷 Nature Photography Gallery</h2>
+      <div class="gallery-grid">
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800"
+            class="carousel-image"
+            alt="Mountain Landscape 1">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800"
+            class="carousel-image"
+            alt="Ocean Sunset">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800"
+            class="carousel-image"
+            alt="Forest Path">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800"
+            class="carousel-image"
+            alt="Coastal View">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5?w=800"
+            class="carousel-image"
+            alt="City Skyline">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800"
+            class="carousel-image"
+            alt="Forest Nature">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800"
+            class="carousel-image"
+            alt="Natural Landscape">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=800"
+            class="carousel-image"
+            alt="Mountain Range">
+        </div>
+        <div class="gallery-item">
+          <img
+            src="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800"
+            class="carousel-image"
+            alt="Lake Reflection">
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p><strong>zPhotoZoom Carousel v2.1.0</strong> | Open Source under MIT License</p>
+      <p style="margin-top: 10px;">
+        Made with ❤️ by AMGHAR Abdeslam
+      </p>
+    </footer>
+  </div>
+
+  <!-- Load zPhotoZoom Carousel -->
+  <script type="module">
+    // Import zPhotoCarousel (in production: import { zPhotoCarousel } from 'zphotozoom')
+    // For this demo, we'll assume it's loaded globally
+
+    // Note: This example assumes zPhotoCarousel is available.
+    // In production, you would import it properly:
+    // import { zPhotoCarousel } from 'zphotozoom';
+
+    // For demonstration purposes, show a helpful message
+    console.log(`
+╔══════════════════════════════════════════════════════╗
+║       zPhotoZoom Carousel Demo                       ║
+╠══════════════════════════════════════════════════════╣
+║ Features:                                            ║
+║ ✓ Navigation arrows (left/right)                    ║
+║ ✓ Keyboard shortcuts (← → Esc Home End Space)       ║
+║ ✓ Thumbnail bar at bottom                           ║
+║ ✓ Image counter (top-right)                         ║
+║ ✓ Smooth slide transitions                          ║
+║ ✓ Swipe support on mobile                           ║
+║ ✓ Zoom & pan functionality                          ║
+║ ✓ Slideshow mode                                    ║
+╚══════════════════════════════════════════════════════╝
+    `);
+
+    // Update status display
+    function updateStatus(message) {
+      const status = document.getElementById('status');
+      const timestamp = new Date().toLocaleTimeString();
+      status.innerHTML = `<strong>Status:</strong> ${message} <em>(${timestamp})</em>`;
+    }
+
+    // Information functions
+    window.showCurrentIndex = function() {
+      const index = window.carousel.getCurrentIndex();
+      updateStatus(`Current index: ${index} (Image #${index + 1})`);
+    };
+
+    window.showTotalImages = function() {
+      const total = window.carousel.getTotalImages();
+      updateStatus(`Total images: ${total}`);
+    };
+
+    window.showPlayingState = function() {
+      const isPlaying = window.carousel.isPlaying();
+      updateStatus(`Slideshow is ${isPlaying ? '▶️ PLAYING' : '⏸️ PAUSED'}`);
+    };
+
+    // Initialize carousel when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if zPhotoCarousel is available
+      if (typeof zPhotoCarousel === 'undefined') {
+        console.error('zPhotoCarousel not found. Please build and include the library.');
+        updateStatus('❌ Error: zPhotoCarousel not loaded. Please build the library first.');
+        return;
+      }
+
+      // Initialize the carousel
+      window.carousel = new zPhotoCarousel({
+        el: '.carousel-image',
+
+        // Base zoom options
+        min: 0.5,
+        max: 8,
+
+        // Carousel options
+        carousel: true,
+        loop: true,
+        startIndex: 0,
+
+        // Thumbnails
+        enableThumbnails: true,
+        thumbnailHeight: 120,
+        thumbnailPosition: 'bottom',
+        thumbnailsVisible: 5,
+
+        // Navigation
+        enableKeyboard: true,
+        enableArrows: true,
+        arrowPosition: 'center',
+        enableSwipe: true,
+
+        // Transitions
+        transition: 'slide', // 'slide' | 'fade' | 'none'
+        transitionDuration: 400,
+
+        // Slideshow
+        autoPlay: false,
+        autoPlayInterval: 3000,
+        pauseOnHover: true,
+
+        // Preloading
+        preloadAdjacent: true,
+        preloadAll: false,
+
+        // Counter
+        showCounter: true,
+        counterPosition: 'top-right'
+      });
+
+      // Register event listeners
+      carousel.onOpen((event) => {
+        console.log('Carousel opened:', event.target);
+        updateStatus('Carousel opened ✨');
+      });
+
+      carousel.onClose((event) => {
+        console.log('Carousel closed');
+        updateStatus('Carousel closed 👋');
+      });
+
+      carousel.onNavigate((event) => {
+        console.log(`Navigate: ${event.from} → ${event.to} (${event.direction})`);
+        updateStatus(`Navigated to image #${event.to + 1} of ${carousel.getTotalImages()}`);
+      });
+
+      carousel.onSlideChange((event) => {
+        console.log(`Slide change: Index ${event.index} (${event.index + 1}/${event.total})`);
+      });
+
+      updateStatus('Carousel initialized! Click any image to start. 🚀');
+      console.log('✅ Carousel initialized successfully!');
+      console.log('💡 Try keyboard shortcuts: ← → to navigate, Esc to close');
+    });
+  </script>
+</body>
+</html>
