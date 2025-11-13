@@ -8,7 +8,7 @@
  */
 var __defProp$7 = Object.defineProperty;
 var __defNormalProp$7 = (obj, key, value) => key in obj ? __defProp$7(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField$7 = (obj, key, value) => __defNormalProp$7(obj, key + "", value);
+var __publicField$7 = (obj, key, value) => __defNormalProp$7(obj, typeof key !== "symbol" ? key + "" : key, value);
 /**
  * zPhotoZoom - A Modern TypeScript Image Zoom Library (CORRECTED VERSION)
  *
@@ -186,6 +186,17 @@ function closeViewer() {
   const process = this._process;
   let prevent = false;
   let stop = false;
+  thisInstance._callPluginHook("beforeClose", {
+    preventDefault: () => {
+      prevent = true;
+    },
+    stopPropagation: () => {
+      stop = true;
+    },
+    target: process.currentImage.image.node,
+    instance: thisInstance
+  });
+  if (prevent) return;
   for (let i = 0; i < process.eventsClose.length; i++) {
     process.eventsClose[i]({
       preventDefault: () => {
@@ -229,6 +240,14 @@ function closeViewer() {
   }
   process.preview = false;
   process.loader = false;
+  thisInstance._callPluginHook("afterClose", {
+    preventDefault: () => {
+    },
+    stopPropagation: () => {
+    },
+    target: process.currentImage?.image.node || null,
+    instance: thisInstance
+  });
 }
 function showLoader(text, timeout) {
   const process = this._process;
@@ -340,6 +359,17 @@ function openViewer(image) {
   const process = this._process;
   let prevent = false;
   let stop = false;
+  thisInstance._callPluginHook("beforeOpen", {
+    preventDefault: () => {
+      prevent = true;
+    },
+    stopPropagation: () => {
+      stop = true;
+    },
+    target: image.node,
+    instance: thisInstance
+  });
+  if (prevent) return;
   for (let i = 0; i < process.eventsOpen.length; i++) {
     process.eventsOpen[i]({
       preventDefault: () => {
@@ -400,6 +430,14 @@ function openViewer(image) {
   if (image.loaded) {
     image.evener.apply();
   }
+  thisInstance._callPluginHook("afterOpen", {
+    preventDefault: () => {
+    },
+    stopPropagation: () => {
+    },
+    target: image.node,
+    instance: thisInstance
+  });
 }
 function getContainerTarget() {
   const container = this._process.container;
@@ -945,6 +983,7 @@ function initialize() {
 class zPhotoZoom {
   constructor(object, context) {
     __publicField$7(this, "_process");
+    __publicField$7(this, "_plugins", /* @__PURE__ */ new Map());
     injectStyles();
     if (!(this instanceof zPhotoZoom)) {
       return console.error("zPhotoZoom is a class and can only be called with the keyword 'new'");
@@ -1048,6 +1087,178 @@ class zPhotoZoom {
         process.eventsClose.push(callback);
       }
     }
+  }
+  // ============================================================================
+  // Plugin System
+  // ============================================================================
+  /**
+   * Register a plugin
+   */
+  registerPlugin(plugin) {
+    if (this._plugins.has(plugin.name)) {
+      console.warn(`Plugin "${plugin.name}" is already registered`);
+      return;
+    }
+    const api = {
+      getImageState: () => this.getImageState(),
+      setImageTransform: (scale, x, y, animate) => this.setImageTransform(scale, x, y, animate),
+      centerImage: (options) => this.centerImageWithOptions(options),
+      resetImage: () => this.reset(),
+      getCurrentImageElement: () => this.getCurrentImageElement(),
+      getPreviewContainer: () => this.getPreviewContainer(),
+      isViewerOpen: () => this.isViewerOpen(),
+      closeViewer: () => this.close()
+    };
+    this._plugins.set(plugin.name, { plugin, api });
+    plugin.initialize(this, api);
+    if (plugin.onRegister) {
+      plugin.onRegister();
+    }
+  }
+  /**
+   * Unregister a plugin
+   */
+  unregisterPlugin(name) {
+    const entry = this._plugins.get(name);
+    if (!entry) {
+      console.warn(`Plugin "${name}" is not registered`);
+      return;
+    }
+    if (entry.plugin.onDestroy) {
+      entry.plugin.onDestroy();
+    }
+    if (entry.plugin.destroy) {
+      entry.plugin.destroy();
+    }
+    this._plugins.delete(name);
+  }
+  /**
+   * Get registered plugin by name
+   */
+  getPlugin(name) {
+    return this._plugins.get(name)?.plugin;
+  }
+  /**
+   * Call plugin hooks
+   * @private
+   */
+  _callPluginHook(hookName, ...args) {
+    this._plugins.forEach(({ plugin }) => {
+      const hook = plugin[hookName];
+      if (typeof hook === "function") {
+        hook.apply(plugin, args);
+      }
+    });
+  }
+  // ============================================================================
+  // Plugin API Methods
+  // ============================================================================
+  /**
+   * Get current image state (for plugins)
+   */
+  getImageState() {
+    const process = this._process;
+    if (!process.currentImage) {
+      return null;
+    }
+    return {
+      scale: process.currentImage.scale,
+      x: process.currentImage.x,
+      y: process.currentImage.y,
+      minScale: process.currentImage.minScale,
+      maxScale: process.currentImage.maxScale
+    };
+  }
+  /**
+   * Set image transformation (for plugins)
+   */
+  setImageTransform(scale, x, y, animate) {
+    const process = this._process;
+    if (!process.preview || !process.currentImage) {
+      return;
+    }
+    process.currentImage.scale = scale;
+    process.currentImage.factor = scale;
+    process.currentImage.x = x;
+    process.currentImage.y = y;
+    updateScaleImage.call(this, scale, {
+      x: x / scale,
+      y: y / scale
+    }, animate);
+    this._callPluginHook("onTransformChange", this.getImageState());
+  }
+  /**
+   * Center image with custom options (for plugins)
+   */
+  centerImageWithOptions(options) {
+    const process = this._process;
+    if (!process.preview || !process.currentImage) {
+      return;
+    }
+    const containerTarget = getContainerTarget.call(this);
+    let container = containerTarget.nf;
+    if (options?.reservedSpaces) {
+      const { top = 0, bottom = 0, left = 0, right = 0 } = options.reservedSpaces;
+      container = {
+        ...container,
+        width: container.width - left - right,
+        height: container.height - top - bottom,
+        x: container.x + left,
+        y: container.y + top,
+        cx: container.cx,
+        cy: container.cy,
+        top: container.top + top,
+        left: container.left + left
+      };
+    }
+    const marginPercent = options?.marginPercent ?? 0.05;
+    if (marginPercent > 0) {
+      const marginWidth = container.width * marginPercent;
+      const marginHeight = container.height * marginPercent;
+      container = {
+        ...container,
+        width: container.width - marginWidth * 2,
+        height: container.height - marginHeight * 2,
+        x: container.x + marginWidth,
+        y: container.y + marginHeight,
+        cx: container.cx,
+        cy: container.cy,
+        top: container.top + marginHeight,
+        left: container.left + marginWidth
+      };
+    }
+    const image = process.currentImage.image;
+    const nf = centerImage(image, container, process.scaleLimit.min, process.scaleLimit.max);
+    if (!options?.allowUpscale) {
+      const maxScale = Math.min(image.width / nf.width, image.height / nf.height);
+      if (nf.scale > maxScale) {
+        nf.scale = maxScale;
+        nf.width = image.width * nf.scale;
+        nf.height = image.height * nf.scale;
+        nf.x = (container.width - nf.width) / 2;
+        nf.y = (container.height - nf.height) / 2;
+      }
+    }
+    process.currentImage.origin = nf;
+    this.setImageTransform(nf.scale, nf.x, nf.y, false);
+  }
+  /**
+   * Get current image element (for plugins)
+   */
+  getCurrentImageElement() {
+    return this._process.currentImage?.imageNode || null;
+  }
+  /**
+   * Get preview container element (for plugins)
+   */
+  getPreviewContainer() {
+    return this._process.preview?.container || null;
+  }
+  /**
+   * Check if viewer is open (for plugins)
+   */
+  isViewerOpen() {
+    return !!this._process.preview;
   }
 }
 var __defProp$6 = Object.defineProperty;
@@ -2467,136 +2678,73 @@ class zPhotoCarousel extends zPhotoZoom {
     }
   }
   /**
-   * Calculate optimal image positioning (adapted from parent's centerImage)
-   * Takes into account thumbnail bar and UX margins
+   * Get center image options for current carousel configuration
    */
-  calculateImageOrigin(image) {
-    const container = this._mainImageContainer;
-    let containerWidth = container.offsetWidth;
-    let containerHeight = container.offsetHeight;
+  getCenterImageOptions() {
+    const options = {
+      marginPercent: 0.05,
+      // 5% margins around image
+      allowUpscale: false,
+      // Never upscale small images
+      reservedSpaces: {}
+    };
     if (this._carouselOptions.enableThumbnails) {
       const tbHeight = this._carouselOptions.thumbnailHeight;
       const tbPosition = this._carouselOptions.thumbnailPosition;
-      if (tbPosition === "top" || tbPosition === "bottom") {
-        containerHeight -= tbHeight;
-      } else if (tbPosition === "left" || tbPosition === "right") {
-        containerWidth -= tbHeight;
+      if (tbPosition === "bottom") {
+        options.reservedSpaces.bottom = tbHeight;
+      } else if (tbPosition === "top") {
+        options.reservedSpaces.top = tbHeight;
+      } else if (tbPosition === "left") {
+        options.reservedSpaces.left = tbHeight;
+      } else if (tbPosition === "right") {
+        options.reservedSpaces.right = tbHeight;
       }
     }
-    const uxMarginWidth = containerWidth * 0.05;
-    const uxMarginHeight = containerHeight * 0.05;
-    containerWidth -= uxMarginWidth * 2;
-    containerHeight -= uxMarginHeight * 2;
-    const containerProp = containerWidth / containerHeight;
-    const imageProp = image.prop;
-    const imageWidth = image.width;
-    const imageHeight = image.height;
-    let newWidth, newHeight;
-    if (containerProp > imageProp) {
-      newHeight = Math.min(containerHeight, imageHeight);
-      newWidth = newHeight * imageProp;
-      if (newWidth > containerWidth) {
-        newWidth = containerWidth;
-        newHeight = newWidth / imageProp;
-      }
-    } else {
-      newWidth = Math.min(containerWidth, imageWidth);
-      newHeight = newWidth / imageProp;
-      if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = newHeight * imageProp;
-      }
-    }
-    if (newWidth > imageWidth || newHeight > imageHeight) {
-      const scaleDown = Math.min(imageWidth / newWidth, imageHeight / newHeight);
-      newWidth *= scaleDown;
-      newHeight *= scaleDown;
-    }
-    let scale = Math.min(newWidth / imageWidth, newHeight / imageHeight);
-    let min = this.process.scaleLimit.min;
-    let max = this.process.scaleLimit.max;
-    if (typeof min !== "number" || min <= 0) {
-      min = 0.3;
-      if (scale < min) {
-        min = scale;
-      }
-    } else if (scale < min) {
-      scale = min;
-    }
-    if (typeof max !== "number" || max < min) {
-      max = 5;
-      if (scale > max) {
-        max = scale;
-        scale = 3;
-      }
-    } else if (scale > max) {
-      scale = max;
-    }
-    const actualContainerWidth = container.offsetWidth;
-    const actualContainerHeight = container.offsetHeight;
-    return {
-      width: newWidth,
-      height: newHeight,
-      x: (actualContainerWidth - newWidth) / 2,
-      y: (actualContainerHeight - newHeight) / 2,
-      scale,
-      min,
-      max
-    };
+    return options;
   }
   /**
    * Update current image reference and apply zoom
    * Implements state persistence: first view uses calculated origin, revisits restore saved state
    */
   updateCurrentImage(image) {
-    const container = this._mainImageContainer;
-    const containerRect = container.getBoundingClientRect();
     const imageNode = image.imageNode;
     const imageIndex = image.index;
-    const savedState = this._imageStates.get(imageIndex);
-    let finalScale, finalX, finalY;
-    let nf;
-    if (savedState && savedState.visited) {
-      finalScale = savedState.scale;
-      finalX = savedState.x;
-      finalY = savedState.y;
-      nf = this.calculateImageOrigin(image);
-    } else {
-      nf = this.calculateImageOrigin(image);
-      finalScale = nf.scale;
-      finalX = nf.x;
-      finalY = nf.y;
-      this._imageStates.set(imageIndex, {
-        scale: finalScale,
-        x: finalX,
-        y: finalY,
-        visited: true
-      });
-    }
-    const translateX = finalX / finalScale;
-    const translateY = finalY / finalScale;
-    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${finalScale}, ${finalScale}, 1)`;
+    const containerRect = this._mainImageContainer.getBoundingClientRect();
     this.process.currentImage = {
       image,
       imageNode,
       animate: false,
-      factor: finalScale,
+      factor: 1,
       distanceFactor: 1,
-      scale: finalScale,
-      origin: nf,
+      scale: 1,
+      origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
       center: {
         x: containerRect.left + containerRect.width / 2,
         y: containerRect.top + containerRect.height / 2
       },
-      minScale: nf.min,
-      maxScale: nf.max,
-      x: finalX,
-      // Raw values (not divided by scale)
-      y: finalY,
-      // Raw values (not divided by scale)
+      minScale: 0.3,
+      maxScale: 5,
+      x: 0,
+      y: 0,
       width: () => this.process.currentImage.imageNode.offsetWidth,
       height: () => this.process.currentImage.imageNode.offsetHeight
     };
+    const savedState = this._imageStates.get(imageIndex);
+    if (savedState && savedState.visited) {
+      this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
+    } else {
+      this.centerImageWithOptions(this.getCenterImageOptions());
+      const state = this.getImageState();
+      if (state) {
+        this._imageStates.set(imageIndex, {
+          scale: state.scale,
+          x: state.x,
+          y: state.y,
+          visited: true
+        });
+      }
+    }
     if (image.loaded && image.evener) {
       image.evener.apply();
     }
@@ -2608,15 +2756,19 @@ class zPhotoCarousel extends zPhotoZoom {
   setupStateTracking(imageIndex) {
     let saveTimeout;
     const saveState = () => {
-      if (!this.process.currentImage || this.process.currentImage.image.index !== imageIndex) {
+      const currentImage = this.process.currentImage;
+      if (!currentImage || currentImage.image.index !== imageIndex) {
         return;
       }
-      this._imageStates.set(imageIndex, {
-        scale: this.process.currentImage.scale,
-        x: this.process.currentImage.x,
-        y: this.process.currentImage.y,
-        visited: true
-      });
+      const state = this.getImageState();
+      if (state) {
+        this._imageStates.set(imageIndex, {
+          scale: state.scale,
+          x: state.x,
+          y: state.y,
+          visited: true
+        });
+      }
     };
     const debouncedSave = () => {
       clearTimeout(saveTimeout);

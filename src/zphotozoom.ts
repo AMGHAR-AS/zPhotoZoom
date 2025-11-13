@@ -11,6 +11,14 @@
  * @author AMGHAR Abdeslam
  */
 
+import type {
+  ZPhotoZoomPlugin,
+  PluginRegistryEntry,
+  PluginAPI,
+  ImageState,
+  CenterImageOptions
+} from './PluginTypes';
+
 /**
  * Injects the CSS styles into the document head
  */
@@ -342,6 +350,16 @@ function closeViewer(this: zPhotoZoom): void {
   let prevent = false;
   let stop = false;
 
+  // Call plugin beforeClose hooks
+  (thisInstance as any)._callPluginHook('beforeClose', {
+    preventDefault: () => { prevent = true; },
+    stopPropagation: () => { stop = true; },
+    target: process.currentImage!.image.node,
+    instance: thisInstance,
+  });
+
+  if (prevent) return;
+
   for (let i = 0; i < process.eventsClose.length; i++) {
     process.eventsClose[i]({
       preventDefault: () => { prevent = true; },
@@ -385,6 +403,14 @@ function closeViewer(this: zPhotoZoom): void {
 
   process.preview = false;
   process.loader = false;
+
+  // Call plugin afterClose hooks
+  (thisInstance as any)._callPluginHook('afterClose', {
+    preventDefault: () => {},
+    stopPropagation: () => {},
+    target: process.currentImage?.image.node || null as any,
+    instance: thisInstance,
+  });
 }
 
 /**
@@ -528,6 +554,16 @@ function openViewer(this: zPhotoZoom, image: ImageData): void {
   let prevent = false;
   let stop = false;
 
+  // Call plugin beforeOpen hooks
+  (thisInstance as any)._callPluginHook('beforeOpen', {
+    preventDefault: () => { prevent = true; },
+    stopPropagation: () => { stop = true; },
+    target: image.node,
+    instance: thisInstance,
+  });
+
+  if (prevent) return;
+
   for (let i = 0; i < process.eventsOpen.length; i++) {
     process.eventsOpen[i]({
       preventDefault: () => { prevent = true; },
@@ -589,6 +625,14 @@ function openViewer(this: zPhotoZoom, image: ImageData): void {
   if (image.loaded) {
     image.evener!.apply();
   }
+
+  // Call plugin afterOpen hooks
+  (thisInstance as any)._callPluginHook('afterOpen', {
+    preventDefault: () => {},
+    stopPropagation: () => {},
+    target: image.node,
+    instance: thisInstance,
+  });
 }
 
 /**
@@ -1293,6 +1337,7 @@ function initialize(this: zPhotoZoom): void {
  */
 class zPhotoZoom {
   private readonly _process!: ProcessState;
+  private _plugins: Map<string, PluginRegistryEntry> = new Map();
 
   constructor(object?: zPhotoZoomOptions, context?: Document) {
     // Inject CSS
@@ -1409,6 +1454,222 @@ class zPhotoZoom {
         process.eventsClose.push(callback);
       }
     }
+  }
+
+  // ============================================================================
+  // Plugin System
+  // ============================================================================
+
+  /**
+   * Register a plugin
+   */
+  public registerPlugin(plugin: ZPhotoZoomPlugin): void {
+    if (this._plugins.has(plugin.name)) {
+      console.warn(`Plugin "${plugin.name}" is already registered`);
+      return;
+    }
+
+    // Create Plugin API for this plugin
+    const api: PluginAPI = {
+      getImageState: () => this.getImageState(),
+      setImageTransform: (scale, x, y, animate) => this.setImageTransform(scale, x, y, animate),
+      centerImage: (options) => this.centerImageWithOptions(options),
+      resetImage: () => this.reset(),
+      getCurrentImageElement: () => this.getCurrentImageElement(),
+      getPreviewContainer: () => this.getPreviewContainer(),
+      isViewerOpen: () => this.isViewerOpen(),
+      closeViewer: () => this.close()
+    };
+
+    // Store plugin
+    this._plugins.set(plugin.name, { plugin, api });
+
+    // Initialize plugin
+    plugin.initialize(this, api);
+
+    // Call onRegister hook
+    if (plugin.onRegister) {
+      plugin.onRegister();
+    }
+  }
+
+  /**
+   * Unregister a plugin
+   */
+  public unregisterPlugin(name: string): void {
+    const entry = this._plugins.get(name);
+    if (!entry) {
+      console.warn(`Plugin "${name}" is not registered`);
+      return;
+    }
+
+    // Call destroy hooks
+    if (entry.plugin.onDestroy) {
+      entry.plugin.onDestroy();
+    }
+    if (entry.plugin.destroy) {
+      entry.plugin.destroy();
+    }
+
+    // Remove from registry
+    this._plugins.delete(name);
+  }
+
+  /**
+   * Get registered plugin by name
+   */
+  public getPlugin(name: string): ZPhotoZoomPlugin | undefined {
+    return this._plugins.get(name)?.plugin;
+  }
+
+  /**
+   * Call plugin hooks
+   * @private
+   */
+  private _callPluginHook(hookName: keyof ZPhotoZoomPlugin, ...args: any[]): void {
+    this._plugins.forEach(({ plugin }) => {
+      const hook = plugin[hookName];
+      if (typeof hook === 'function') {
+        (hook as any).apply(plugin, args);
+      }
+    });
+  }
+
+  // ============================================================================
+  // Plugin API Methods
+  // ============================================================================
+
+  /**
+   * Get current image state (for plugins)
+   */
+  public getImageState(): ImageState | null {
+    const process = this._process;
+    if (!process.currentImage) {
+      return null;
+    }
+
+    return {
+      scale: process.currentImage.scale,
+      x: process.currentImage.x,
+      y: process.currentImage.y,
+      minScale: process.currentImage.minScale,
+      maxScale: process.currentImage.maxScale
+    };
+  }
+
+  /**
+   * Set image transformation (for plugins)
+   */
+  public setImageTransform(scale: number, x: number, y: number, animate?: boolean): void {
+    const process = this._process;
+    if (!process.preview || !process.currentImage) {
+      return;
+    }
+
+    // Update the currentImage state
+    process.currentImage.scale = scale;
+    process.currentImage.factor = scale;
+    process.currentImage.x = x;
+    process.currentImage.y = y;
+
+    // Call the internal updateScaleImage function
+    updateScaleImage.call(this, scale, {
+      x: x / scale,
+      y: y / scale
+    }, animate);
+
+    // Notify plugins of transform change
+    this._callPluginHook('onTransformChange', this.getImageState());
+  }
+
+  /**
+   * Center image with custom options (for plugins)
+   */
+  public centerImageWithOptions(options?: CenterImageOptions): void {
+    const process = this._process;
+    if (!process.preview || !process.currentImage) {
+      return;
+    }
+
+    const containerTarget = getContainerTarget.call(this);
+    let container = containerTarget.nf;
+
+    // Apply reserved spaces
+    if (options?.reservedSpaces) {
+      const { top = 0, bottom = 0, left = 0, right = 0 } = options.reservedSpaces;
+      container = {
+        ...container,
+        width: container.width - left - right,
+        height: container.height - top - bottom,
+        x: container.x + left,
+        y: container.y + top,
+        cx: container.cx,
+        cy: container.cy,
+        top: container.top + top,
+        left: container.left + left
+      };
+    }
+
+    // Apply margins
+    const marginPercent = options?.marginPercent ?? 0.05;
+    if (marginPercent > 0) {
+      const marginWidth = container.width * marginPercent;
+      const marginHeight = container.height * marginPercent;
+      container = {
+        ...container,
+        width: container.width - marginWidth * 2,
+        height: container.height - marginHeight * 2,
+        x: container.x + marginWidth,
+        y: container.y + marginHeight,
+        cx: container.cx,
+        cy: container.cy,
+        top: container.top + marginHeight,
+        left: container.left + marginWidth
+      };
+    }
+
+    // Calculate new origin with modified container
+    const image = process.currentImage.image;
+    const nf = centerImage(image, container, process.scaleLimit.min, process.scaleLimit.max);
+
+    // Handle upscale option
+    if (!options?.allowUpscale) {
+      const maxScale = Math.min(image.width! / nf.width, image.height! / nf.height);
+      if (nf.scale > maxScale) {
+        nf.scale = maxScale;
+        nf.width = image.width! * nf.scale;
+        nf.height = image.height! * nf.scale;
+        nf.x = (container.width - nf.width) / 2;
+        nf.y = (container.height - nf.height) / 2;
+      }
+    }
+
+    // Update origin
+    process.currentImage.origin = nf;
+
+    // Apply transform
+    this.setImageTransform(nf.scale, nf.x, nf.y, false);
+  }
+
+  /**
+   * Get current image element (for plugins)
+   */
+  public getCurrentImageElement(): HTMLImageElement | null {
+    return this._process.currentImage?.imageNode || null;
+  }
+
+  /**
+   * Get preview container element (for plugins)
+   */
+  public getPreviewContainer(): HTMLElement | null {
+    return (this._process.preview as PreviewContainer)?.container || null;
+  }
+
+  /**
+   * Check if viewer is open (for plugins)
+   */
+  public isViewerOpen(): boolean {
+    return !!this._process.preview;
   }
 }
 

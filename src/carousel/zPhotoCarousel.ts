@@ -766,105 +766,32 @@ export class zPhotoCarousel extends zPhotoZoom {
   }
 
   /**
-   * Calculate optimal image positioning (adapted from parent's centerImage)
-   * Takes into account thumbnail bar and UX margins
+   * Get center image options for current carousel configuration
    */
-  private calculateImageOrigin(image: ImageDataExtended): any {
-    const container = this._mainImageContainer!;
-    let containerWidth = container.offsetWidth;
-    let containerHeight = container.offsetHeight;
+  private getCenterImageOptions(): import('../PluginTypes').CenterImageOptions {
+    const options: import('../PluginTypes').CenterImageOptions = {
+      marginPercent: 0.05, // 5% margins around image
+      allowUpscale: false, // Never upscale small images
+      reservedSpaces: {}
+    };
 
-    // Subtract thumbnail bar space from available area
+    // Calculate reserved space for thumbnail bar
     if (this._carouselOptions.enableThumbnails) {
       const tbHeight = this._carouselOptions.thumbnailHeight;
       const tbPosition = this._carouselOptions.thumbnailPosition;
 
-      if (tbPosition === 'top' || tbPosition === 'bottom') {
-        containerHeight -= tbHeight;
-      } else if (tbPosition === 'left' || tbPosition === 'right') {
-        containerWidth -= tbHeight; // For vertical bars, thumbnailHeight is used as width
+      if (tbPosition === 'bottom') {
+        options.reservedSpaces!.bottom = tbHeight;
+      } else if (tbPosition === 'top') {
+        options.reservedSpaces!.top = tbHeight;
+      } else if (tbPosition === 'left') {
+        options.reservedSpaces!.left = tbHeight;
+      } else if (tbPosition === 'right') {
+        options.reservedSpaces!.right = tbHeight;
       }
     }
 
-    // Add UX margins (5% on each side)
-    const uxMarginWidth = containerWidth * 0.05;
-    const uxMarginHeight = containerHeight * 0.05;
-    containerWidth -= uxMarginWidth * 2;
-    containerHeight -= uxMarginHeight * 2;
-
-    const containerProp = containerWidth / containerHeight;
-    const imageProp = image.prop!;
-    const imageWidth = image.width!;
-    const imageHeight = image.height!;
-
-    let newWidth: number, newHeight: number;
-
-    // Calculate best fit dimensions
-    if (containerProp > imageProp) {
-      // Container is wider than image - fit to height
-      newHeight = Math.min(containerHeight, imageHeight);
-      newWidth = newHeight * imageProp;
-
-      // If still too wide, fit to width
-      if (newWidth > containerWidth) {
-        newWidth = containerWidth;
-        newHeight = newWidth / imageProp;
-      }
-    } else {
-      // Container is taller than image - fit to width
-      newWidth = Math.min(containerWidth, imageWidth);
-      newHeight = newWidth / imageProp;
-
-      // If still too tall, fit to height
-      if (newHeight > containerHeight) {
-        newHeight = containerHeight;
-        newWidth = newHeight * imageProp;
-      }
-    }
-
-    // Never exceed original image dimensions
-    if (newWidth > imageWidth || newHeight > imageHeight) {
-      const scaleDown = Math.min(imageWidth / newWidth, imageHeight / newHeight);
-      newWidth *= scaleDown;
-      newHeight *= scaleDown;
-    }
-
-    let scale = Math.min(newWidth / imageWidth, newHeight / imageHeight);
-    let min = this.process.scaleLimit.min;
-    let max = this.process.scaleLimit.max;
-
-    if (typeof min !== 'number' || min <= 0) {
-      min = 0.3;
-      if (scale < min) {
-        min = scale;
-      }
-    } else if (scale < min) {
-      scale = min;
-    }
-
-    if (typeof max !== 'number' || max < min) {
-      max = 5;
-      if (scale > max) {
-        max = scale;
-        scale = 3;
-      }
-    } else if (scale > max) {
-      scale = max;
-    }
-
-    // Get actual container dimensions (with margins added back)
-    const actualContainerWidth = container.offsetWidth;
-    const actualContainerHeight = container.offsetHeight;
-
-    return {
-      width: newWidth,
-      height: newHeight,
-      x: (actualContainerWidth - newWidth) / 2,
-      y: (actualContainerHeight - newHeight) / 2,
-      scale: scale,
-      min: min,
-      max: max
-    };
+    return options;
   }
 
   /**
@@ -872,67 +799,53 @@ export class zPhotoCarousel extends zPhotoZoom {
    * Implements state persistence: first view uses calculated origin, revisits restore saved state
    */
   private updateCurrentImage(image: ImageDataExtended): void {
-    const container = this._mainImageContainer!;
-    const containerRect = container.getBoundingClientRect();
     const imageNode = image.imageNode!;
     const imageIndex = image.index!;
 
-    // Check if image has been visited before
-    const savedState = this._imageStates.get(imageIndex);
-    let finalScale: number, finalX: number, finalY: number;
-    let nf: any;
-
-    if (savedState && savedState.visited) {
-      // REVISIT: Restore saved state (user manipulations preserved)
-      finalScale = savedState.scale;
-      finalX = savedState.x;
-      finalY = savedState.y;
-
-      // Still need to calculate origin for min/max scales
-      nf = this.calculateImageOrigin(image);
-    } else {
-      // FIRST VIEW: Calculate optimal positioning
-      nf = this.calculateImageOrigin(image);
-      finalScale = nf.scale;
-      finalX = nf.x;
-      finalY = nf.y;
-
-      // Mark as visited and save initial state
-      this._imageStates.set(imageIndex, {
-        scale: finalScale,
-        x: finalX,
-        y: finalY,
-        visited: true
-      });
-    }
-
-    // Apply transform manually (parent's updateScaleImage is not accessible)
-    // Use same logic as parent: translate by (x/scale, y/scale) and scale by factor
-    const translateX = finalX / finalScale;
-    const translateY = finalY / finalScale;
-    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${finalScale}, ${finalScale}, 1)`;
-
-    // Update process.currentImage with correct structure (matching parent exactly)
-    // Structure from zphotozoom.ts openViewer function (lines 565-587)
+    // Temporarily set currentImage so parent methods work correctly
+    // This is necessary because parent's centerImageWithOptions expects currentImage to exist
+    const containerRect = this._mainImageContainer!.getBoundingClientRect();
     this.process.currentImage = {
       image: image,
       imageNode: imageNode,
       animate: false,
-      factor: finalScale,
+      factor: 1,
       distanceFactor: 1,
-      scale: finalScale,
-      origin: nf,
+      scale: 1,
+      origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
       center: {
         x: containerRect.left + containerRect.width / 2,
         y: containerRect.top + containerRect.height / 2
       },
-      minScale: nf.min,
-      maxScale: nf.max,
-      x: finalX,  // Raw values (not divided by scale)
-      y: finalY,  // Raw values (not divided by scale)
+      minScale: 0.3,
+      maxScale: 5,
+      x: 0,
+      y: 0,
       width: () => this.process.currentImage!.imageNode.offsetWidth,
       height: () => this.process.currentImage!.imageNode.offsetHeight
     };
+
+    // Check if image has been visited before
+    const savedState = this._imageStates.get(imageIndex);
+
+    if (savedState && savedState.visited) {
+      // REVISIT: Restore saved state (user manipulations preserved)
+      this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
+    } else {
+      // FIRST VIEW: Use parent's centerImage with our custom options
+      this.centerImageWithOptions(this.getCenterImageOptions());
+
+      // Save initial state
+      const state = this.getImageState();
+      if (state) {
+        this._imageStates.set(imageIndex, {
+          scale: state.scale,
+          x: state.x,
+          y: state.y,
+          visited: true
+        });
+      }
+    }
 
     // Apply image-specific events if image is loaded
     if (image.loaded && image.evener) {
@@ -951,16 +864,21 @@ export class zPhotoCarousel extends zPhotoZoom {
     let saveTimeout: ReturnType<typeof setTimeout>;
 
     const saveState = () => {
-      if (!this.process.currentImage || this.process.currentImage.image.index !== imageIndex) {
+      const currentImage = this.process.currentImage;
+      if (!currentImage || (currentImage.image as ImageDataExtended).index !== imageIndex) {
         return; // Image changed, ignore
       }
 
-      this._imageStates.set(imageIndex, {
-        scale: this.process.currentImage.scale,
-        x: this.process.currentImage.x,
-        y: this.process.currentImage.y,
-        visited: true
-      });
+      // Use public API to get current state
+      const state = this.getImageState();
+      if (state) {
+        this._imageStates.set(imageIndex, {
+          scale: state.scale,
+          x: state.x,
+          y: state.y,
+          visited: true
+        });
+      }
     };
 
     // Save state after a short delay when zoom/pan stops
