@@ -80,16 +80,15 @@ export class ThumbnailBar implements IThumbnailBar {
     item.setAttribute('tabindex', '0');
     item.setAttribute('aria-label', `View image ${index + 1}`);
 
-    // Calculate thumbnail size based on position
+    // Set thumbnail to take full height (100%)
     const isHorizontal = this.options.position === 'top' || this.options.position === 'bottom';
-    const thumbnailSize = isHorizontal
-      ? this.options.height - 20 // Leave padding
-      : this.options.height; // For vertical, use height as width
 
     if (isHorizontal) {
-      item.style.width = `${thumbnailSize}px`;
+      // For horizontal bars, thumbnails take full height and auto width based on aspect ratio
+      item.style.height = '100%';
     } else {
-      item.style.height = `${thumbnailSize}px`;
+      // For vertical bars, thumbnails take full width
+      item.style.width = '100%';
     }
 
     // Create img element

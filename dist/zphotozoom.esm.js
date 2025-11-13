@@ -1701,11 +1701,10 @@ class ThumbnailBar {
     item.setAttribute("tabindex", "0");
     item.setAttribute("aria-label", `View image ${index + 1}`);
     const isHorizontal = this.options.position === "top" || this.options.position === "bottom";
-    const thumbnailSize = isHorizontal ? this.options.height - 20 : this.options.height;
     if (isHorizontal) {
-      item.style.width = `${thumbnailSize}px`;
+      item.style.height = "100%";
     } else {
-      item.style.height = `${thumbnailSize}px`;
+      item.style.width = "100%";
     }
     const img = document.createElement("img");
     img.src = image.thumbnailSrc || image.src;
@@ -1952,138 +1951,6 @@ class Counter {
     this.totalSpan = null;
   }
 }
-/**
- * Transition Animations for zPhotoZoom Carousel
- *
- * @module carousel/Transitions
- * @license MIT
- */
-const slideTransition = async (fromElement, toElement, direction, duration, container) => {
-  return new Promise((resolve, reject) => {
-    if (!fromElement || !toElement || !container) {
-      reject(new Error("Transition requires valid fromElement, toElement, and container"));
-      return;
-    }
-    if (!container.contains(fromElement) && fromElement.parentNode) {
-      console.warn("zPhotoCarousel: fromElement is not in the expected container");
-    }
-    try {
-      const startOffset = direction === "forward" ? "100%" : "-100%";
-      const endOffset = direction === "forward" ? "-100%" : "100%";
-      toElement.style.position = "absolute";
-      toElement.style.top = "0";
-      toElement.style.left = "0";
-      toElement.style.width = "100%";
-      toElement.style.height = "100%";
-      toElement.style.transform = `translateX(${startOffset})`;
-      toElement.style.opacity = "1";
-      if (toElement.parentNode !== container) {
-        container.appendChild(toElement);
-      }
-      void toElement.offsetHeight;
-      const timing = "cubic-bezier(0.4, 0, 0.2, 1)";
-      fromElement.style.transition = `transform ${duration}ms ${timing}`;
-      toElement.style.transition = `transform ${duration}ms ${timing}`;
-      fromElement.style.transform = `translateX(${endOffset})`;
-      toElement.style.transform = "translateX(0)";
-      const timeoutId = setTimeout(() => {
-        try {
-          if (fromElement.parentNode === container) {
-            container.removeChild(fromElement);
-          }
-          fromElement.style.transform = "";
-          fromElement.style.transition = "";
-          fromElement.style.position = "";
-          toElement.style.transition = "";
-          toElement.style.position = "";
-          resolve();
-        } catch (cleanupError) {
-          console.error("zPhotoCarousel: Error during transition cleanup:", cleanupError);
-          resolve();
-        }
-      }, duration);
-      toElement.__transitionTimeoutId = timeoutId;
-    } catch (error) {
-      console.error("zPhotoCarousel: Error during slide transition:", error);
-      reject(error);
-    }
-  });
-};
-const fadeTransition = async (fromElement, toElement, _direction, duration, container) => {
-  return new Promise((resolve, reject) => {
-    if (!fromElement || !toElement || !container) {
-      reject(new Error("Transition requires valid fromElement, toElement, and container"));
-      return;
-    }
-    if (!container.contains(fromElement) && fromElement.parentNode) {
-      console.warn("zPhotoCarousel: fromElement is not in the expected container");
-    }
-    try {
-      toElement.style.position = "absolute";
-      toElement.style.top = "0";
-      toElement.style.left = "0";
-      toElement.style.width = "100%";
-      toElement.style.height = "100%";
-      toElement.style.opacity = "0";
-      if (toElement.parentNode !== container) {
-        container.appendChild(toElement);
-      }
-      void toElement.offsetHeight;
-      fromElement.style.transition = `opacity ${duration}ms ease`;
-      toElement.style.transition = `opacity ${duration}ms ease`;
-      fromElement.style.opacity = "0";
-      toElement.style.opacity = "1";
-      const timeoutId = setTimeout(() => {
-        try {
-          if (fromElement.parentNode === container) {
-            container.removeChild(fromElement);
-          }
-          fromElement.style.opacity = "";
-          fromElement.style.transition = "";
-          fromElement.style.position = "";
-          toElement.style.transition = "";
-          toElement.style.position = "";
-          resolve();
-        } catch (cleanupError) {
-          console.error("zPhotoCarousel: Error during transition cleanup:", cleanupError);
-          resolve();
-        }
-      }, duration);
-      toElement.__transitionTimeoutId = timeoutId;
-    } catch (error) {
-      console.error("zPhotoCarousel: Error during fade transition:", error);
-      reject(error);
-    }
-  });
-};
-const noneTransition = async (fromElement, toElement, _direction, _duration, container) => {
-  return new Promise((resolve, reject) => {
-    if (!fromElement || !toElement || !container) {
-      reject(new Error("Transition requires valid fromElement, toElement, and container"));
-      return;
-    }
-    try {
-      if (toElement.parentNode !== container) {
-        container.appendChild(toElement);
-      }
-      if (fromElement.parentNode === container) {
-        container.removeChild(fromElement);
-      }
-      resolve();
-    } catch (error) {
-      console.error("zPhotoCarousel: Error during instant transition:", error);
-      reject(error);
-    }
-  });
-};
-const transitions = {
-  slide: slideTransition,
-  fade: fadeTransition,
-  none: noneTransition
-};
-function getTransition(name) {
-  return transitions[name] || slideTransition;
-}
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -2104,12 +1971,30 @@ const injectCarouselStyles = () => {
       position: relative;
       flex: 1;
       overflow: hidden;
+    }
+
+    .zpz-slides-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
+
+    .zpz-slide {
+      position: relative;
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .zpz-main-image-container img {
+    .zpz-slide img {
       position: absolute;
       max-width: 100%;
       max-height: 100%;
@@ -2264,7 +2149,7 @@ const injectCarouselStyles = () => {
       height: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 12px 16px;
+      padding: 8px 16px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
     }
@@ -2297,15 +2182,14 @@ const injectCarouselStyles = () => {
 
     .zpz-tb-track {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       height: 100%;
-      justify-content: center;
       align-items: center;
       min-width: min-content;
     }
 
     .zpz-tb-bottom .zpz-tb-track,
-    .zpz-tb-top .zpz-tb-track {
+    .zpz-tb-tb-top .zpz-tb-track {
       flex-direction: row;
     }
 
@@ -2318,12 +2202,15 @@ const injectCarouselStyles = () => {
       flex: 0 0 auto;
       cursor: pointer;
       border: 2px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       background: rgba(255, 255, 255, 0.05);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .zpz-tb-item::after {
@@ -2417,9 +2304,10 @@ class zPhotoCarousel extends zPhotoZoom {
     __publicField(this, "_navigateCallbacks", []);
     __publicField(this, "_slideChangeCallbacks", []);
     __publicField(this, "_mainImageContainer");
+    __publicField(this, "_slidesWrapper");
+    __publicField(this, "_slides", /* @__PURE__ */ new Map());
     __publicField(this, "_clickHandlers", /* @__PURE__ */ new Map());
     __publicField(this, "_hoverHandlers", null);
-    __publicField(this, "_activeTransitionController", null);
     __publicField(this, "_originalEventHandlers", /* @__PURE__ */ new Map());
     __publicField(this, "_imageStates", /* @__PURE__ */ new Map());
     this._carouselOptions = {
@@ -2548,7 +2436,11 @@ class zPhotoCarousel extends zPhotoZoom {
       container.appendChild(this._mainImageContainer);
     } else {
       this._mainImageContainer.innerHTML = "";
+      this._slides.clear();
     }
+    this._slidesWrapper = document.createElement("div");
+    this._slidesWrapper.className = "zpz-slides-wrapper";
+    this._mainImageContainer.appendChild(this._slidesWrapper);
   }
   /**
    * Setup carousel UI components
@@ -2614,7 +2506,38 @@ class zPhotoCarousel extends zPhotoZoom {
     }
   }
   /**
-   * Display image at index
+   * Create or get slide for image
+   */
+  getOrCreateSlide(index) {
+    let slide = this._slides.get(index);
+    if (!slide) {
+      slide = document.createElement("div");
+      slide.className = "zpz-slide";
+      slide.setAttribute("data-index", index.toString());
+      this._slides.set(index, slide);
+    }
+    return slide;
+  }
+  /**
+   * Prepare slide with image and transformations
+   */
+  async prepareSlide(index) {
+    const image = this.process.images[index];
+    if (!image) return;
+    if (!image.loaded && this._preloader) {
+      await this._preloader.preloadImage(index);
+    }
+    const imageNode = image.imageNode;
+    if (!imageNode) return;
+    const slide = this.getOrCreateSlide(index);
+    slide.innerHTML = "";
+    slide.appendChild(imageNode);
+    if (index === this._carouselState.currentIndex) {
+      this.updateCurrentImage(image);
+    }
+  }
+  /**
+   * Display image at index with horizontal slide system
    */
   async displayImage(index, withTransition = true) {
     const image = this.process.images[index];
@@ -2622,60 +2545,45 @@ class zPhotoCarousel extends zPhotoZoom {
       console.error("zPhotoCarousel: Invalid image index:", index);
       return;
     }
-    if (!image.loaded && this._preloader) {
-      await this._preloader.preloadImage(index);
+    await this.prepareSlide(index);
+    const prevIndex = this.getPreviousIndex();
+    const nextIndex = this.getNextIndex();
+    if (prevIndex !== index) {
+      this.prepareSlide(prevIndex).catch(() => {
+      });
     }
-    const imageNode = image.imageNode;
-    if (!imageNode) {
-      console.error("zPhotoCarousel: Image not loaded:", index);
-      return;
+    if (nextIndex !== index) {
+      this.prepareSlide(nextIndex).catch(() => {
+      });
     }
-    if (!this.process.currentImage || !withTransition) {
-      this._mainImageContainer.appendChild(imageNode);
-      this.updateCurrentImage(image);
-      return;
+    this._slidesWrapper.innerHTML = "";
+    if (prevIndex !== index) {
+      const prevSlide = this.getOrCreateSlide(prevIndex);
+      this._slidesWrapper.appendChild(prevSlide);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "zpz-slide";
+      this._slidesWrapper.appendChild(placeholder);
     }
-    if (this._activeTransitionController) {
-      this._activeTransitionController.cancel();
-      if (this._activeTransitionController.timeoutId) {
-        clearTimeout(this._activeTransitionController.timeoutId);
-      }
-      this._carouselState.isTransitioning = false;
-      this._activeTransitionController = null;
+    const currentSlide = this.getOrCreateSlide(index);
+    this._slidesWrapper.appendChild(currentSlide);
+    if (nextIndex !== index) {
+      const nextSlide = this.getOrCreateSlide(nextIndex);
+      this._slidesWrapper.appendChild(nextSlide);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "zpz-slide";
+      this._slidesWrapper.appendChild(placeholder);
     }
-    const currentImageNode = this.process.currentImage.imageNode;
-    const transitionFn = getTransition(this._carouselOptions.transition);
-    const direction = this._carouselState.direction || "forward";
-    this._carouselState.isTransitioning = true;
-    let transitionCancelled = false;
-    this._activeTransitionController = {
-      cancel: () => {
-        transitionCancelled = true;
-      }
-    };
-    try {
-      await transitionFn(
-        currentImageNode,
-        imageNode,
-        direction,
-        this._carouselOptions.transitionDuration,
-        this._mainImageContainer
-      );
-      const timeoutId = imageNode.__transitionTimeoutId;
-      if (timeoutId && this._activeTransitionController) {
-        this._activeTransitionController.timeoutId = timeoutId;
-      }
-      if (!transitionCancelled) {
-        this.updateCurrentImage(image);
-      }
-    } catch (error) {
-      if (!transitionCancelled) {
-        console.error("zPhotoCarousel: Transition error:", error);
-      }
-    } finally {
-      this._carouselState.isTransitioning = false;
-      this._activeTransitionController = null;
+    if (withTransition && this.process.currentImage) {
+      this._slidesWrapper.style.transition = "none";
+      this._slidesWrapper.style.transform = "translateX(-100%)";
+      void this._slidesWrapper.offsetHeight;
+      this._slidesWrapper.style.transition = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
+    } else {
+      this._slidesWrapper.style.transform = "translateX(-100%)";
     }
+    this.updateCurrentImage(image);
   }
   /**
    * Get center image options for current carousel configuration
@@ -2710,45 +2618,47 @@ class zPhotoCarousel extends zPhotoZoom {
   updateCurrentImage(image) {
     const imageNode = image.imageNode;
     const imageIndex = image.index;
-    const containerRect = this._mainImageContainer.getBoundingClientRect();
-    this.process.currentImage = {
-      image,
-      imageNode,
-      animate: false,
-      factor: 1,
-      distanceFactor: 1,
-      scale: 1,
-      origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
-      center: {
-        x: containerRect.left + containerRect.width / 2,
-        y: containerRect.top + containerRect.height / 2
-      },
-      minScale: 0.3,
-      maxScale: 5,
-      x: 0,
-      y: 0,
-      width: () => this.process.currentImage.imageNode.offsetWidth,
-      height: () => this.process.currentImage.imageNode.offsetHeight
-    };
-    const savedState = this._imageStates.get(imageIndex);
-    if (savedState && savedState.visited) {
-      this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
-    } else {
-      this.centerImageWithOptions(this.getCenterImageOptions());
-      const state = this.getImageState();
-      if (state) {
-        this._imageStates.set(imageIndex, {
-          scale: state.scale,
-          x: state.x,
-          y: state.y,
-          visited: true
-        });
+    setTimeout(() => {
+      const containerRect = this._mainImageContainer.getBoundingClientRect();
+      this.process.currentImage = {
+        image,
+        imageNode,
+        animate: false,
+        factor: 1,
+        distanceFactor: 1,
+        scale: 1,
+        origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
+        center: {
+          x: containerRect.left + containerRect.width / 2,
+          y: containerRect.top + containerRect.height / 2
+        },
+        minScale: 0.3,
+        maxScale: 5,
+        x: 0,
+        y: 0,
+        width: () => this.process.currentImage.imageNode.offsetWidth,
+        height: () => this.process.currentImage.imageNode.offsetHeight
+      };
+      const savedState = this._imageStates.get(imageIndex);
+      if (savedState && savedState.visited) {
+        this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
+      } else {
+        this.centerImageWithOptions(this.getCenterImageOptions());
+        const state = this.getImageState();
+        if (state) {
+          this._imageStates.set(imageIndex, {
+            scale: state.scale,
+            x: state.x,
+            y: state.y,
+            visited: true
+          });
+        }
       }
-    }
-    if (image.loaded && image.evener) {
-      image.evener.apply();
-    }
-    this.setupStateTracking(imageIndex);
+      if (image.loaded && image.evener) {
+        image.evener.apply();
+      }
+      this.setupStateTracking(imageIndex);
+    }, 0);
   }
   /**
    * Setup tracking of zoom/pan changes to persist them

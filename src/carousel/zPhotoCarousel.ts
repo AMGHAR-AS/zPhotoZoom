@@ -24,7 +24,6 @@ import { SwipeDetector } from './SwipeDetector';
 import { ThumbnailBar } from './ThumbnailBar';
 import { NavigationArrows } from './NavigationArrows';
 import { Counter } from './Counter';
-import { getTransition } from './Transitions';
 
 /**
  * Inject carousel-specific CSS styles
@@ -47,12 +46,30 @@ const injectCarouselStyles = (): void => {
       position: relative;
       flex: 1;
       overflow: hidden;
+    }
+
+    .zpz-slides-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
+
+    .zpz-slide {
+      position: relative;
+      flex: 0 0 100%;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .zpz-main-image-container img {
+    .zpz-slide img {
       position: absolute;
       max-width: 100%;
       max-height: 100%;
@@ -207,7 +224,7 @@ const injectCarouselStyles = (): void => {
       height: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 12px 16px;
+      padding: 8px 16px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
     }
@@ -240,15 +257,14 @@ const injectCarouselStyles = (): void => {
 
     .zpz-tb-track {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       height: 100%;
-      justify-content: center;
       align-items: center;
       min-width: min-content;
     }
 
     .zpz-tb-bottom .zpz-tb-track,
-    .zpz-tb-top .zpz-tb-track {
+    .zpz-tb-tb-top .zpz-tb-track {
       flex-direction: row;
     }
 
@@ -261,12 +277,15 @@ const injectCarouselStyles = (): void => {
       flex: 0 0 auto;
       cursor: pointer;
       border: 2px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       background: rgba(255, 255, 255, 0.05);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .zpz-tb-item::after {
@@ -404,18 +423,14 @@ export class zPhotoCarousel extends zPhotoZoom {
 
   // UI elements
   private _mainImageContainer?: HTMLElement;
+  private _slidesWrapper?: HTMLElement;
+  private _slides: Map<number, HTMLElement> = new Map(); // index -> slide element
 
   // Store click handlers for proper cleanup
   private _clickHandlers: Map<HTMLElement, (e: Event) => void> = new Map();
 
   // Store hover handlers for pauseOnHover
   private _hoverHandlers: { mouseenter: () => void; mouseleave: () => void } | null = null;
-
-  // Store active transition for cancellation
-  private _activeTransitionController: {
-    cancel: () => void;
-    timeoutId?: ReturnType<typeof setTimeout>;
-  } | null = null;
 
   // Store original event handlers from parent for restoration
   private _originalEventHandlers: Map<HTMLElement, { evener: ImageEventManager }> = new Map();
@@ -601,7 +616,13 @@ export class zPhotoCarousel extends zPhotoZoom {
     } else {
       // Clear existing content if reusing
       this._mainImageContainer.innerHTML = '';
+      this._slides.clear();
     }
+
+    // Create slides wrapper
+    this._slidesWrapper = document.createElement('div');
+    this._slidesWrapper.className = 'zpz-slides-wrapper';
+    this._mainImageContainer.appendChild(this._slidesWrapper);
   }
 
   /**
@@ -682,7 +703,49 @@ export class zPhotoCarousel extends zPhotoZoom {
   }
 
   /**
-   * Display image at index
+   * Create or get slide for image
+   */
+  private getOrCreateSlide(index: number): HTMLElement {
+    let slide = this._slides.get(index);
+    if (!slide) {
+      slide = document.createElement('div');
+      slide.className = 'zpz-slide';
+      slide.setAttribute('data-index', index.toString());
+      this._slides.set(index, slide);
+    }
+    return slide;
+  }
+
+  /**
+   * Prepare slide with image and transformations
+   */
+  private async prepareSlide(index: number): Promise<void> {
+    const image = this.process.images[index] as ImageDataExtended;
+    if (!image) return;
+
+    // Ensure image is loaded
+    if (!image.loaded && this._preloader) {
+      await this._preloader.preloadImage(index);
+    }
+
+    const imageNode = image.imageNode;
+    if (!imageNode) return;
+
+    // Get or create slide
+    const slide = this.getOrCreateSlide(index);
+
+    // Clear slide and add image
+    slide.innerHTML = '';
+    slide.appendChild(imageNode);
+
+    // If this is the current image, update transformations
+    if (index === this._carouselState.currentIndex) {
+      this.updateCurrentImage(image);
+    }
+  }
+
+  /**
+   * Display image at index with horizontal slide system
    */
   private async displayImage(index: number, withTransition: boolean = true): Promise<void> {
     const image = this.process.images[index] as ImageDataExtended;
@@ -692,77 +755,64 @@ export class zPhotoCarousel extends zPhotoZoom {
       return;
     }
 
-    // Ensure image is loaded
-    if (!image.loaded && this._preloader) {
-      await this._preloader.preloadImage(index);
+    // Prepare current slide
+    await this.prepareSlide(index);
+
+    // Prepare adjacent slides for smooth transitions
+    const prevIndex = this.getPreviousIndex();
+    const nextIndex = this.getNextIndex();
+
+    if (prevIndex !== index) {
+      this.prepareSlide(prevIndex).catch(() => {}); // Don't wait
+    }
+    if (nextIndex !== index) {
+      this.prepareSlide(nextIndex).catch(() => {}); // Don't wait
     }
 
-    const imageNode = image.imageNode;
-    if (!imageNode) {
-      console.error('zPhotoCarousel: Image not loaded:', index);
-      return;
+    // Arrange slides: [prev, current, next]
+    this._slidesWrapper!.innerHTML = '';
+
+    if (prevIndex !== index) {
+      const prevSlide = this.getOrCreateSlide(prevIndex);
+      this._slidesWrapper!.appendChild(prevSlide);
+    } else {
+      // Placeholder
+      const placeholder = document.createElement('div');
+      placeholder.className = 'zpz-slide';
+      this._slidesWrapper!.appendChild(placeholder);
     }
 
-    // If this is the first image or no transition, just add it
-    if (!this.process.currentImage || !withTransition) {
-      this._mainImageContainer!.appendChild(imageNode);
-      this.updateCurrentImage(image);
-      return;
+    const currentSlide = this.getOrCreateSlide(index);
+    this._slidesWrapper!.appendChild(currentSlide);
+
+    if (nextIndex !== index) {
+      const nextSlide = this.getOrCreateSlide(nextIndex);
+      this._slidesWrapper!.appendChild(nextSlide);
+    } else {
+      // Placeholder
+      const placeholder = document.createElement('div');
+      placeholder.className = 'zpz-slide';
+      this._slidesWrapper!.appendChild(placeholder);
     }
 
-    // Cancel any ongoing transition
-    if (this._activeTransitionController) {
-      this._activeTransitionController.cancel();
-      // Clear the timeout if it exists
-      if (this._activeTransitionController.timeoutId) {
-        clearTimeout(this._activeTransitionController.timeoutId);
-      }
-      this._carouselState.isTransitioning = false;
-      this._activeTransitionController = null;
+    // Position to show current slide (middle one)
+    if (withTransition && this.process.currentImage) {
+      // Disable transition temporarily to position without animation
+      this._slidesWrapper!.style.transition = 'none';
+      this._slidesWrapper!.style.transform = 'translateX(-100%)';
+
+      // Force reflow
+      void this._slidesWrapper!.offsetHeight;
+
+      // Re-enable transition
+      this._slidesWrapper!.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    } else {
+      // First image, just position
+      this._slidesWrapper!.style.transform = 'translateX(-100%)';
     }
 
-    // Perform transition
-    const currentImageNode = this.process.currentImage.imageNode;
-    const transitionFn = getTransition(this._carouselOptions.transition);
-    const direction = this._carouselState.direction || 'forward';
-
-    this._carouselState.isTransitioning = true;
-
-    // Create cancellable transition
-    let transitionCancelled = false;
-    this._activeTransitionController = {
-      cancel: () => {
-        transitionCancelled = true;
-      }
-    };
-
-    try {
-      await transitionFn(
-        currentImageNode,
-        imageNode,
-        direction,
-        this._carouselOptions.transitionDuration,
-        this._mainImageContainer!
-      );
-
-      // Extract timeout ID from the element (set by transition functions)
-      const timeoutId = (imageNode as any).__transitionTimeoutId;
-      if (timeoutId && this._activeTransitionController) {
-        this._activeTransitionController.timeoutId = timeoutId;
-      }
-
-      // Only update if transition wasn't cancelled
-      if (!transitionCancelled) {
-        this.updateCurrentImage(image);
-      }
-    } catch (error) {
-      if (!transitionCancelled) {
-        console.error('zPhotoCarousel: Transition error:', error);
-      }
-    } finally {
-      this._carouselState.isTransitioning = false;
-      this._activeTransitionController = null;
-    }
+    // Update current image
+    this.updateCurrentImage(image);
   }
 
   /**
@@ -802,58 +852,61 @@ export class zPhotoCarousel extends zPhotoZoom {
     const imageNode = image.imageNode!;
     const imageIndex = image.index!;
 
-    // Temporarily set currentImage so parent methods work correctly
-    // This is necessary because parent's centerImageWithOptions expects currentImage to exist
-    const containerRect = this._mainImageContainer!.getBoundingClientRect();
-    this.process.currentImage = {
-      image: image,
-      imageNode: imageNode,
-      animate: false,
-      factor: 1,
-      distanceFactor: 1,
-      scale: 1,
-      origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
-      center: {
-        x: containerRect.left + containerRect.width / 2,
-        y: containerRect.top + containerRect.height / 2
-      },
-      minScale: 0.3,
-      maxScale: 5,
-      x: 0,
-      y: 0,
-      width: () => this.process.currentImage!.imageNode.offsetWidth,
-      height: () => this.process.currentImage!.imageNode.offsetHeight
-    };
+    // Wait for container to be properly sized
+    setTimeout(() => {
+      // Temporarily set currentImage so parent methods work correctly
+      // This is necessary because parent's centerImageWithOptions expects currentImage to exist
+      const containerRect = this._mainImageContainer!.getBoundingClientRect();
+      this.process.currentImage = {
+        image: image,
+        imageNode: imageNode,
+        animate: false,
+        factor: 1,
+        distanceFactor: 1,
+        scale: 1,
+        origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
+        center: {
+          x: containerRect.left + containerRect.width / 2,
+          y: containerRect.top + containerRect.height / 2
+        },
+        minScale: 0.3,
+        maxScale: 5,
+        x: 0,
+        y: 0,
+        width: () => this.process.currentImage!.imageNode.offsetWidth,
+        height: () => this.process.currentImage!.imageNode.offsetHeight
+      };
 
-    // Check if image has been visited before
-    const savedState = this._imageStates.get(imageIndex);
+      // Check if image has been visited before
+      const savedState = this._imageStates.get(imageIndex);
 
-    if (savedState && savedState.visited) {
-      // REVISIT: Restore saved state (user manipulations preserved)
-      this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
-    } else {
-      // FIRST VIEW: Use parent's centerImage with our custom options
-      this.centerImageWithOptions(this.getCenterImageOptions());
+      if (savedState && savedState.visited) {
+        // REVISIT: Restore saved state (user manipulations preserved)
+        this.setImageTransform(savedState.scale, savedState.x, savedState.y, false);
+      } else {
+        // FIRST VIEW: Use parent's centerImage with our custom options
+        this.centerImageWithOptions(this.getCenterImageOptions());
 
-      // Save initial state
-      const state = this.getImageState();
-      if (state) {
-        this._imageStates.set(imageIndex, {
-          scale: state.scale,
-          x: state.x,
-          y: state.y,
-          visited: true
-        });
+        // Save initial state
+        const state = this.getImageState();
+        if (state) {
+          this._imageStates.set(imageIndex, {
+            scale: state.scale,
+            x: state.x,
+            y: state.y,
+            visited: true
+          });
+        }
       }
-    }
 
-    // Apply image-specific events if image is loaded
-    if (image.loaded && image.evener) {
-      image.evener.apply();
-    }
+      // Apply image-specific events if image is loaded
+      if (image.loaded && image.evener) {
+        image.evener.apply();
+      }
 
-    // Setup state tracking to save user manipulations
-    this.setupStateTracking(imageIndex);
+      // Setup state tracking to save user manipulations
+      this.setupStateTracking(imageIndex);
+    }, 0);
   }
 
   /**
