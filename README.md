@@ -4,20 +4,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 
-A modern, lightweight TypeScript library for creating interactive image zoom viewers with seamless touch and mouse support.
+A modern, feature-rich TypeScript library for creating interactive image zoom viewers with seamless touch and mouse support. Includes an optional carousel/gallery extension for multi-image navigation with thumbnails.
 
 ## ✨ Features
 
+### Core Features
 - 🖱️ **Mouse Wheel Zoom** - Smooth zooming with configurable limits
 - 👆 **Touch Gestures** - Pinch-to-zoom and drag-to-pan on mobile devices
 - 📱 **Responsive Design** - Automatic repositioning on window resize
 - ⚡ **Performance** - GPU-accelerated transforms for smooth 60fps animations
 - 🎨 **Customizable** - Configurable zoom limits and container modes
-- 📦 **Lightweight** - ~15KB minified + gzipped
+- 📦 **Lightweight** - ~15KB minified + gzipped (core only)
 - 🔧 **TypeScript** - Full type definitions included
 - 🎯 **Zero Dependencies** - No external libraries required
-- ♿ **Accessible** - Keyboard navigation ready (coming soon)
 - 🌐 **Browser Support** - Works on all modern browsers
+
+### Carousel Extension
+- 🎠 **Multi-Image Navigation** - Browse through image galleries with smooth transitions
+- 🖼️ **Thumbnail Bar** - Visual preview with scrollable thumbnails
+- ⌨️ **Keyboard Navigation** - Arrow keys, Home, End, Escape support
+- 📱 **Touch Swipe** - Swipe left/right to navigate on mobile
+- 🔄 **State Persistence** - Remembers zoom/position when navigating between images
+- 🎬 **Smooth Transitions** - Configurable slide and fade animations
+- 🔢 **Image Counter** - Shows current position (e.g., "3 / 12")
+- 🔌 **Plugin System** - Extensible architecture for custom features
 
 ## 📦 Installation
 
@@ -79,6 +89,36 @@ viewer.onOpen((event: ViewerEvent) => {
 
 viewer.onClose((event: ViewerEvent) => {
   console.log('Image closed:', event.target);
+});
+```
+
+### Carousel Usage
+
+```typescript
+import { zPhotoCarousel } from 'zphotozoom';
+
+const carousel = new zPhotoCarousel({
+  el: '.gallery img',
+  min: 0.5,
+  max: 8,
+
+  // Carousel options
+  enableThumbnails: true,
+  thumbnailHeight: 120,
+  thumbnailPosition: 'bottom',
+  enableKeyboard: true,
+  enableArrows: true,
+  transition: 'slide'
+});
+
+// Navigation
+carousel.next();
+carousel.previous();
+carousel.goTo(2);
+
+// Events
+carousel.onNavigate((event) => {
+  console.log(`Navigating from ${event.from} to ${event.to}`);
 });
 ```
 
@@ -344,14 +384,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🗺️ Roadmap
 
-- [ ] Keyboard navigation support
-- [ ] ARIA attributes for accessibility
+### Completed ✅
+- [x] Gallery navigation (prev/next)
+- [x] Thumbnail strip in viewer
+- [x] Plugin system for extensibility
+- [x] Keyboard navigation support
+- [x] Animation easing configuration
+
+### In Progress 🚧
+- [ ] ARIA attributes for accessibility improvements
+- [ ] Enhanced keyboard shortcuts
+
+### Planned 📋
 - [ ] Image rotation support
-- [ ] Gallery navigation (prev/next)
-- [ ] Thumbnail strip in viewer
 - [ ] Virtual scrolling for large galleries
-- [ ] Animation easing configuration
-- [ ] Plugin system for extensibility
+- [ ] Fullscreen API integration
+- [ ] Video support
 
 ---
 

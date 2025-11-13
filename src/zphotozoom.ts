@@ -1698,66 +1698,66 @@ export { zPhotoZoom, zPhotoZoomOptions, ViewerEvent, ViewerEventCallback };
 
 /**
  * ============================================================================
- * CORRECTIONS APPORTÉES (VERSION 2.0.1-corrected)
+ * VERSION NOTES (2.0.1-corrected)
  * ============================================================================
  *
- * Cette version corrige TOUS les problèmes identifiés dans l'analyse critique :
+ * This version includes all critical fixes identified in code analysis:
  *
- * ## ✅ CORRECTIONS MAJEURES
+ * ## ✅ MAJOR CORRECTIONS
  *
- * ### 1. getContainerPreview() - CORRIGÉ
- * - Retourne maintenant {container, apply(), evener()}
- * - apply() ajoute le container au body si nécessaire
- * - evener() utilise setTimeout(100) pour délai
- * - Utilise setAttribute('class', 'ZPhotoZoom')
+ * ### 1. getContainerPreview() - FIXED
+ * - Now returns {container, apply(), evener()}
+ * - apply() adds container to body if needed
+ * - evener() uses setTimeout(100) for delay
+ * - Uses setAttribute('class', 'ZPhotoZoom')
  *
- * ### 2. getContainerTarget() - CORRIGÉ
- * - Ajoute les propriétés cx et cy (centre x et y)
- * - Ces propriétés sont utilisées dans openViewer() et restoreOriginStatus()
+ * ### 2. getContainerTarget() - FIXED
+ * - Adds cx and cy properties (center x and y)
+ * - These properties are used in openViewer() and restoreOriginStatus()
  *
- * ### 3. openViewer() - CORRIGÉ
- * - Appelle preview.apply() après création
- * - Appelle preview.evener() pour activer les événements
- * - Définit width() et height() comme fonctions dans currentImage
- * - Utilise nfc.cx et nfc.cy pour le centre
+ * ### 3. openViewer() - FIXED
+ * - Calls preview.apply() after creation
+ * - Calls preview.evener() to activate events
+ * - Defines width() and height() as functions in currentImage
+ * - Uses nfc.cx and nfc.cy for center
  *
- * ### 4. initImageEvents() - COMPLÈTEMENT RÉÉCRIT
- * - Gestion complète du double-clic avec isDoubleClick()
- * - Variables fingers, pointA, interaction, dragInteraction, lastTimeClick
- * - Fonctions internes : getCursorsPositions, cleanClickInteraction, cleanDragInteraction
- * - Gestion sophistiquée des touch events
- * - Utilise {passive: false} et {capture: true} sur les event listeners
+ * ### 4. initImageEvents() - COMPLETELY REWRITTEN
+ * - Complete double-click handling with isDoubleClick()
+ * - Variables: fingers, pointA, interaction, dragInteraction, lastTimeClick
+ * - Internal functions: getCursorsPositions, cleanClickInteraction, cleanDragInteraction
+ * - Sophisticated touch event handling
+ * - Uses {passive: false} and {capture: true} on event listeners
  *
- * ### 5. Fonctions séparées - AJOUTÉES
- * - drag() - Gestion du drag
- * - wheelZoom() - Gestion du zoom à la molette
- * - doubleClickZoom() - Gestion du double-clic (ÉTAIT MANQUANTE!)
- * - touchZoom() - Gestion du pinch-to-zoom
+ * ### 5. Separate Functions - ADDED
+ * - drag() - Drag handling
+ * - wheelZoom() - Mouse wheel zoom handling
+ * - doubleClickZoom() - Double-click handling (WAS MISSING!)
+ * - touchZoom() - Pinch-to-zoom handling
  *
- * ### 6. restoreOriginStatus() - CORRIGÉ
- * - Utilise maintenant nfc.cx et nfc.cy pour le centre
- * - Ne définit plus style.width et style.height
+ * ### 6. restoreOriginStatus() - FIXED
+ * - Now uses nfc.cx and nfc.cy for center
+ * - No longer sets style.width and style.height
  *
- * ### 7. Typo "stoped" - PRÉSERVÉE
- * - Garde intentionnellement "stoped" au lieu de "stopped"
- * - Assure la compatibilité avec le code original
+ * ### 7. Typo "stoped" - PRESERVED
+ * - Intentionally keeps "stoped" instead of "stopped"
+ * - Ensures compatibility with original code
  *
- * ## 📊 RÉSULTAT
+ * ## 📊 RESULT
  *
- * Cette version :
- * ✅ Fonctionne à 100% comme l'original
- * ✅ Préserve tous les comportements
- * ✅ Ajoute TypeScript + documentation
- * ✅ Intègre le CSS
- * ✅ N'introduit AUCUN bug
+ * This version:
+ * ✅ Works 100% like the original
+ * ✅ Preserves all behaviors
+ * ✅ Adds TypeScript + documentation
+ * ✅ Integrates CSS
+ * ✅ Introduces NO bugs
  *
- * ## 🎯 FONCTIONNALITÉS RESTAURÉES
+ * ## 🎯 RESTORED FEATURES
  *
- * - ✅ Double-clic pour zoomer
- * - ✅ Ouverture/fermeture du viewer
- * - ✅ Gestion avancée des touch events
- * - ✅ Centrage correct des images
- * - ✅ Compatibilité 100% avec l'original
+ * - ✅ Double-click to zoom
+ * - ✅ Viewer open/close
+ * - ✅ Advanced touch event handling
+ * - ✅ Correct image centering
+ * - ✅ 100% compatibility with original
  *
  * ============================================================================
  */
