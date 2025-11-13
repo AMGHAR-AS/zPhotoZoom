@@ -1199,14 +1199,17 @@ class zPhotoZoom {
     let container = containerTarget.nf;
     if (options?.reservedSpaces) {
       const { top = 0, bottom = 0, left = 0, right = 0 } = options.reservedSpaces;
+      const newWidth = container.width - left - right;
+      const newHeight = container.height - top - bottom;
       container = {
         ...container,
-        width: container.width - left - right,
-        height: container.height - top - bottom,
+        width: newWidth,
+        height: newHeight,
         x: container.x + left,
         y: container.y + top,
-        cx: container.cx,
-        cy: container.cy,
+        // Recalculate center based on reserved spaces
+        cx: container.x + left + newWidth / 2,
+        cy: container.y + top + newHeight / 2,
         top: container.top + top,
         left: container.left + left
       };
@@ -1215,14 +1218,17 @@ class zPhotoZoom {
     if (marginPercent > 0) {
       const marginWidth = container.width * marginPercent;
       const marginHeight = container.height * marginPercent;
+      const newWidth = container.width - marginWidth * 2;
+      const newHeight = container.height - marginHeight * 2;
       container = {
         ...container,
-        width: container.width - marginWidth * 2,
-        height: container.height - marginHeight * 2,
+        width: newWidth,
+        height: newHeight,
         x: container.x + marginWidth,
         y: container.y + marginHeight,
-        cx: container.cx,
-        cy: container.cy,
+        // Recalculate center based on margins
+        cx: container.x + marginWidth + newWidth / 2,
+        cy: container.y + marginHeight + newHeight / 2,
         top: container.top + marginHeight,
         left: container.left + marginWidth
       };
