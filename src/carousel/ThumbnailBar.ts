@@ -147,7 +147,7 @@ export class ThumbnailBar implements IThumbnailBar {
   }
 
   /**
-   * Scroll to the active thumbnail
+   * Scroll to the active thumbnail using native smooth scroll
    */
   public scrollToActive(): void {
     if (!this.track || !this.container || this.currentIndex < 0) {
@@ -159,55 +159,12 @@ export class ThumbnailBar implements IThumbnailBar {
       return;
     }
 
-    const isHorizontal = this.options.position === 'top' || this.options.position === 'bottom';
-
-    if (isHorizontal) {
-      this.scrollHorizontal(activeThumbnail);
-    } else {
-      this.scrollVertical(activeThumbnail);
-    }
-  }
-
-  /**
-   * Scroll horizontally to center active thumbnail
-   */
-  private scrollHorizontal(activeThumbnail: HTMLElement): void {
-    const containerWidth = this.container!.offsetWidth;
-    const thumbnailWidth = activeThumbnail.offsetWidth;
-    const thumbnailLeft = activeThumbnail.offsetLeft;
-    const trackWidth = this.track!.scrollWidth;
-
-    // Calculate position to center the thumbnail
-    const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
-
-    // Clamp scroll position between 0 and max scroll
-    const maxScroll = Math.max(0, trackWidth - containerWidth);
-    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
-
-    // Apply smooth scroll
-    this.track!.style.transition = 'transform 0.3s ease';
-    this.track!.style.transform = `translateX(-${clampedScroll}px)`;
-  }
-
-  /**
-   * Scroll vertically to center active thumbnail
-   */
-  private scrollVertical(activeThumbnail: HTMLElement): void {
-    const containerHeight = this.container!.offsetHeight;
-    const thumbnailHeight = activeThumbnail.offsetHeight;
-    const thumbnailTop = activeThumbnail.offsetTop;
-    const trackHeight = this.track!.scrollHeight;
-
-    // Calculate position to center the thumbnail
-    const scrollPosition = thumbnailTop - (containerHeight / 2) + (thumbnailHeight / 2);
-
-    // Clamp scroll position between 0 and max scroll
-    const maxScroll = Math.max(0, trackHeight - containerHeight);
-    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
-
-    // Apply smooth scroll
-    this.track!.style.transition = 'transform 0.3s ease';
-    this.track!.style.transform = `translateY(-${clampedScroll}px)`;
+    // Use native smooth scroll to center the active thumbnail
+    activeThumbnail.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center'
+    });
   }
 
   /**

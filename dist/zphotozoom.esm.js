@@ -1536,7 +1536,7 @@ class ThumbnailBar {
     this.scrollToActive();
   }
   /**
-   * Scroll to the active thumbnail
+   * Scroll to the active thumbnail using native smooth scroll
    */
   scrollToActive() {
     if (!this.track || !this.container || this.currentIndex < 0) {
@@ -1546,40 +1546,11 @@ class ThumbnailBar {
     if (!activeThumbnail) {
       return;
     }
-    const isHorizontal = this.options.position === "top" || this.options.position === "bottom";
-    if (isHorizontal) {
-      this.scrollHorizontal(activeThumbnail);
-    } else {
-      this.scrollVertical(activeThumbnail);
-    }
-  }
-  /**
-   * Scroll horizontally to center active thumbnail
-   */
-  scrollHorizontal(activeThumbnail) {
-    const containerWidth = this.container.offsetWidth;
-    const thumbnailWidth = activeThumbnail.offsetWidth;
-    const thumbnailLeft = activeThumbnail.offsetLeft;
-    const trackWidth = this.track.scrollWidth;
-    const scrollPosition = thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2;
-    const maxScroll = Math.max(0, trackWidth - containerWidth);
-    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
-    this.track.style.transition = "transform 0.3s ease";
-    this.track.style.transform = `translateX(-${clampedScroll}px)`;
-  }
-  /**
-   * Scroll vertically to center active thumbnail
-   */
-  scrollVertical(activeThumbnail) {
-    const containerHeight = this.container.offsetHeight;
-    const thumbnailHeight = activeThumbnail.offsetHeight;
-    const thumbnailTop = activeThumbnail.offsetTop;
-    const trackHeight = this.track.scrollHeight;
-    const scrollPosition = thumbnailTop - containerHeight / 2 + thumbnailHeight / 2;
-    const maxScroll = Math.max(0, trackHeight - containerHeight);
-    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
-    this.track.style.transition = "transform 0.3s ease";
-    this.track.style.transform = `translateY(-${clampedScroll}px)`;
+    activeThumbnail.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center"
+    });
   }
   /**
    * Update the thumbnail bar with new images
@@ -2041,9 +2012,10 @@ const injectCarouselStyles = () => {
     /* Thumbnail Bar */
     .zpz-thumbnail-bar {
       position: absolute;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%);
+      backdrop-filter: blur(20px);
       z-index: 1000;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .zpz-tb-bottom {
@@ -2056,31 +2028,69 @@ const injectCarouselStyles = () => {
       top: 0;
       left: 0;
       right: 0;
+      border-top: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .zpz-tb-left {
       left: 0;
       top: 0;
       bottom: 0;
+      border-top: none;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .zpz-tb-right {
       right: 0;
       top: 0;
       bottom: 0;
+      border-top: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .zpz-tb-container {
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      padding: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 12px 16px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .zpz-tb-left .zpz-tb-container,
+    .zpz-tb-right .zpz-tb-container {
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Custom scrollbar for webkit browsers */
+    .zpz-tb-container::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+
+    .zpz-tb-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .zpz-tb-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    .zpz-tb-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .zpz-tb-track {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       height: 100%;
+      justify-content: center;
+      align-items: center;
+      min-width: min-content;
     }
 
     .zpz-tb-bottom .zpz-tb-track,
@@ -2096,26 +2106,49 @@ const injectCarouselStyles = () => {
     .zpz-tb-item {
       flex: 0 0 auto;
       cursor: pointer;
-      border: 3px solid transparent;
-      border-radius: 5px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
       overflow: hidden;
-      transition: all 0.3s ease;
-      background: rgba(255, 255, 255, 0.1);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .zpz-tb-item::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
     }
 
     .zpz-tb-item:hover {
-      border-color: rgba(255, 255, 255, 0.5);
-      transform: scale(1.05);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .zpz-tb-item:hover::after {
+      opacity: 1;
     }
 
     .zpz-tb-item:focus-visible {
-      outline: 2px solid #667eea;
-      outline-offset: 2px;
+      outline: 3px solid #667eea;
+      outline-offset: 3px;
     }
 
     .zpz-tb-item.zpz-tb-active {
       border-color: #667eea;
-      box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+      border-width: 3px;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2),
+                  0 4px 20px rgba(102, 126, 234, 0.6);
+      transform: scale(1.1);
+    }
+
+    .zpz-tb-item.zpz-tb-active::after {
+      opacity: 0;
     }
 
     .zpz-tb-item img {
@@ -2177,6 +2210,7 @@ class zPhotoCarousel extends zPhotoZoom {
     __publicField(this, "_hoverHandlers", null);
     __publicField(this, "_activeTransitionController", null);
     __publicField(this, "_originalEventHandlers", /* @__PURE__ */ new Map());
+    __publicField(this, "_imageStates", /* @__PURE__ */ new Map());
     this._carouselOptions = {
       ...options,
       carousel: options.carousel !== false,
@@ -2433,32 +2467,52 @@ class zPhotoCarousel extends zPhotoZoom {
     }
   }
   /**
-   * Calculate optimal image positioning (same logic as parent's centerImage)
+   * Calculate optimal image positioning (adapted from parent's centerImage)
+   * Takes into account thumbnail bar and UX margins
    */
   calculateImageOrigin(image) {
     const container = this._mainImageContainer;
-    const containerWidth = container.offsetWidth;
-    const containerHeight = container.offsetHeight;
-    const containerProp = containerWidth / containerHeight;
-    let newWidth, newHeight;
-    if (image.landscape) {
-      newWidth = 8 * containerWidth / 10;
-      newHeight = newWidth / image.prop;
-      if (newHeight > containerHeight) {
-        newHeight = 9 * containerHeight / 10;
-        newWidth = newHeight * image.prop;
-      }
-    } else {
-      if (containerProp >= image.prop) {
-        newHeight = 9 * containerHeight / 10;
-        newWidth = newHeight * image.prop;
-      } else {
-        const tmp = image.prop - containerProp;
-        newHeight = 9 * containerHeight / 10 - 8 * containerHeight / 10 * tmp;
-        newWidth = newHeight * image.prop;
+    let containerWidth = container.offsetWidth;
+    let containerHeight = container.offsetHeight;
+    if (this._carouselOptions.enableThumbnails) {
+      const tbHeight = this._carouselOptions.thumbnailHeight;
+      const tbPosition = this._carouselOptions.thumbnailPosition;
+      if (tbPosition === "top" || tbPosition === "bottom") {
+        containerHeight -= tbHeight;
+      } else if (tbPosition === "left" || tbPosition === "right") {
+        containerWidth -= tbHeight;
       }
     }
-    let scale = Math.min(newWidth / image.width, newHeight / image.height);
+    const uxMarginWidth = containerWidth * 0.05;
+    const uxMarginHeight = containerHeight * 0.05;
+    containerWidth -= uxMarginWidth * 2;
+    containerHeight -= uxMarginHeight * 2;
+    const containerProp = containerWidth / containerHeight;
+    const imageProp = image.prop;
+    const imageWidth = image.width;
+    const imageHeight = image.height;
+    let newWidth, newHeight;
+    if (containerProp > imageProp) {
+      newHeight = Math.min(containerHeight, imageHeight);
+      newWidth = newHeight * imageProp;
+      if (newWidth > containerWidth) {
+        newWidth = containerWidth;
+        newHeight = newWidth / imageProp;
+      }
+    } else {
+      newWidth = Math.min(containerWidth, imageWidth);
+      newHeight = newWidth / imageProp;
+      if (newHeight > containerHeight) {
+        newHeight = containerHeight;
+        newWidth = newHeight * imageProp;
+      }
+    }
+    if (newWidth > imageWidth || newHeight > imageHeight) {
+      const scaleDown = Math.min(imageWidth / newWidth, imageHeight / newHeight);
+      newWidth *= scaleDown;
+      newHeight *= scaleDown;
+    }
+    let scale = Math.min(newWidth / imageWidth, newHeight / imageHeight);
     let min = this.process.scaleLimit.min;
     let max = this.process.scaleLimit.max;
     if (typeof min !== "number" || min <= 0) {
@@ -2478,11 +2532,13 @@ class zPhotoCarousel extends zPhotoZoom {
     } else if (scale > max) {
       scale = max;
     }
+    const actualContainerWidth = container.offsetWidth;
+    const actualContainerHeight = container.offsetHeight;
     return {
       width: newWidth,
       height: newHeight,
-      x: (containerWidth - newWidth) / 2,
-      y: (containerHeight - newHeight) / 2,
+      x: (actualContainerWidth - newWidth) / 2,
+      y: (actualContainerHeight - newHeight) / 2,
       scale,
       min,
       max
@@ -2490,22 +2546,43 @@ class zPhotoCarousel extends zPhotoZoom {
   }
   /**
    * Update current image reference and apply zoom
+   * Implements state persistence: first view uses calculated origin, revisits restore saved state
    */
   updateCurrentImage(image) {
-    const nf = this.calculateImageOrigin(image);
     const container = this._mainImageContainer;
     const containerRect = container.getBoundingClientRect();
     const imageNode = image.imageNode;
-    const translateX = nf.x / nf.scale;
-    const translateY = nf.y / nf.scale;
-    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
+    const imageIndex = image.index;
+    const savedState = this._imageStates.get(imageIndex);
+    let finalScale, finalX, finalY;
+    let nf;
+    if (savedState && savedState.visited) {
+      finalScale = savedState.scale;
+      finalX = savedState.x;
+      finalY = savedState.y;
+      nf = this.calculateImageOrigin(image);
+    } else {
+      nf = this.calculateImageOrigin(image);
+      finalScale = nf.scale;
+      finalX = nf.x;
+      finalY = nf.y;
+      this._imageStates.set(imageIndex, {
+        scale: finalScale,
+        x: finalX,
+        y: finalY,
+        visited: true
+      });
+    }
+    const translateX = finalX / finalScale;
+    const translateY = finalY / finalScale;
+    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${finalScale}, ${finalScale}, 1)`;
     this.process.currentImage = {
       image,
       imageNode,
       animate: false,
-      factor: nf.scale,
+      factor: finalScale,
       distanceFactor: 1,
-      scale: nf.scale,
+      scale: finalScale,
       origin: nf,
       center: {
         x: containerRect.left + containerRect.width / 2,
@@ -2513,16 +2590,57 @@ class zPhotoCarousel extends zPhotoZoom {
       },
       minScale: nf.min,
       maxScale: nf.max,
-      x: nf.x,
-      // Raw values (not divided by scale) - parent does same at line 579
-      y: nf.y,
-      // Raw values (not divided by scale) - parent does same at line 580
+      x: finalX,
+      // Raw values (not divided by scale)
+      y: finalY,
+      // Raw values (not divided by scale)
       width: () => this.process.currentImage.imageNode.offsetWidth,
       height: () => this.process.currentImage.imageNode.offsetHeight
     };
     if (image.loaded && image.evener) {
       image.evener.apply();
     }
+    this.setupStateTracking(imageIndex);
+  }
+  /**
+   * Setup tracking of zoom/pan changes to persist them
+   */
+  setupStateTracking(imageIndex) {
+    let saveTimeout;
+    const saveState = () => {
+      if (!this.process.currentImage || this.process.currentImage.image.index !== imageIndex) {
+        return;
+      }
+      this._imageStates.set(imageIndex, {
+        scale: this.process.currentImage.scale,
+        x: this.process.currentImage.x,
+        y: this.process.currentImage.y,
+        visited: true
+      });
+    };
+    const debouncedSave = () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(saveState, 300);
+    };
+    const container = this._mainImageContainer;
+    const handlers = {
+      wheel: debouncedSave,
+      mouseup: debouncedSave,
+      touchend: debouncedSave
+    };
+    const cleanup = () => {
+      clearTimeout(saveTimeout);
+      container.removeEventListener("wheel", handlers.wheel);
+      container.removeEventListener("mouseup", handlers.mouseup);
+      container.removeEventListener("touchend", handlers.touchend);
+    };
+    if (container.__stateTrackingCleanup) {
+      container.__stateTrackingCleanup();
+    }
+    container.addEventListener("wheel", handlers.wheel, { passive: true });
+    container.addEventListener("mouseup", handlers.mouseup);
+    container.addEventListener("touchend", handlers.touchend);
+    container.__stateTrackingCleanup = cleanup;
   }
   // ========================================================================
   // Public Navigation API
@@ -2799,10 +2917,15 @@ class zPhotoCarousel extends zPhotoZoom {
   // Cleanup
   // ========================================================================
   /**
-   * Override close to cleanup carousel components
+   * Override close to cleanup carousel components and reset all state
    */
   close() {
     this.pause();
+    if (this._mainImageContainer && this._mainImageContainer.__stateTrackingCleanup) {
+      this._mainImageContainer.__stateTrackingCleanup();
+      delete this._mainImageContainer.__stateTrackingCleanup;
+    }
+    this._imageStates.clear();
     this._thumbnailBar?.destroy();
     this._thumbnailBar = void 0;
     this._keyboardNav?.destroy();
