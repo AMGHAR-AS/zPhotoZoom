@@ -2707,6 +2707,27 @@ class zPhotoCarousel extends zPhotoZoom {
     const imageIndex = image.index;
     setTimeout(() => {
       const containerRect = this._mainImageContainer.getBoundingClientRect();
+      let availableWidth = containerRect.width;
+      let availableHeight = containerRect.height;
+      let offsetX = 0;
+      let offsetY = 0;
+      if (this._carouselOptions.enableThumbnails) {
+        const tbHeight = this._carouselOptions.thumbnailHeight;
+        const tbPosition = this._carouselOptions.thumbnailPosition;
+        if (tbPosition === "bottom") {
+          availableHeight -= tbHeight;
+        } else if (tbPosition === "top") {
+          availableHeight -= tbHeight;
+          offsetY = tbHeight;
+        } else if (tbPosition === "left") {
+          availableWidth -= tbHeight;
+          offsetX = tbHeight;
+        } else if (tbPosition === "right") {
+          availableWidth -= tbHeight;
+        }
+      }
+      const centerX = containerRect.left + offsetX + availableWidth / 2;
+      const centerY = containerRect.top + offsetY + availableHeight / 2;
       this.process.currentImage = {
         image,
         imageNode,
@@ -2716,8 +2737,10 @@ class zPhotoCarousel extends zPhotoZoom {
         scale: 1,
         origin: { width: 0, height: 0, x: 0, y: 0, scale: 1, min: 0.3, max: 5 },
         center: {
-          x: containerRect.left + containerRect.width / 2,
-          y: containerRect.top + containerRect.height / 2
+          x: centerX,
+          // Use calculated center of available space
+          y: centerY
+          // Use calculated center of available space
         },
         minScale: 0.3,
         maxScale: 5,
