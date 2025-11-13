@@ -5,7 +5,7 @@
  * @license MIT
  */
 
-import type { zPhotoZoomOptions, ViewerEvent, ViewerEventCallback } from '../zphotozoom';
+import type { zPhotoZoomOptions } from '../zphotozoom';
 
 // ============================================================================
 // Carousel Configuration Types

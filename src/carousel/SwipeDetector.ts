@@ -103,11 +103,13 @@ export class SwipeDetector implements ISwipeDetector {
 
     if (e.touches.length === 1) {
       const touch = e.touches[0];
-      this.startPoint = {
-        x: touch.clientX,
-        y: touch.clientY,
-        time: Date.now()
-      };
+      if (touch) {
+        this.startPoint = {
+          x: touch.clientX,
+          y: touch.clientY,
+          time: Date.now()
+        };
+      }
     } else {
       // Multiple touches - cancel swipe
       this.startPoint = null;
@@ -138,6 +140,11 @@ export class SwipeDetector implements ISwipeDetector {
     }
 
     const touch = e.changedTouches[0];
+    if (!touch) {
+      this.startPoint = null;
+      return;
+    }
+
     const endPoint: TouchPoint = {
       x: touch.clientX,
       y: touch.clientY,

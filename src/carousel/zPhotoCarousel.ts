@@ -938,12 +938,73 @@ export class zPhotoCarousel extends zPhotoZoom {
    * Get container preview with carousel support
    */
   private getContainerPreview(): any {
-    // Use parent's getContainerPreview method
-    // This is a simplified version - in production, properly handle 'this' context
-    return (super as any).getContainerPreview?.call(this) || {
-      container: document.createElement('div'),
-      apply: () => {},
-      evener: () => {}
+    const thisInstance = this;
+    const process = this._process;
+    let moved = false;
+    let interaction = false;
+
+    function mouseDown(e: MouseEvent): void {
+      if (e.button === 0) {
+        interaction = true;
+        if (!process.flags.isMoved) {
+          moved = false;
+        }
+      }
+    }
+
+    function mousemove(e: MouseEvent): void {
+      if (process.flags.isMoved || interaction) {
+        moved = true;
+      }
+    }
+
+    function mouseup(this: HTMLElement, e: MouseEvent): void {
+      const body = process.context.body || process.context.getElementsByTagName('body')[0];
+      if (((this === e.target) || !body) && !moved && interaction) {
+        try {
+          thisInstance.close();
+        } catch (e) {}
+      }
+      moved = false;
+      interaction = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    let body: HTMLElement | undefined;
+    let container: HTMLElement;
+    let context: HTMLElement | Document;
+
+    if (process.container) {
+      container = process.container;
+      context = process.context;
+    } else {
+      container = process.context.createElement('DIV');
+      container.setAttribute('class', 'ZPhotoZoom');
+      body = process.context.body || process.context.getElementsByTagName('body')[0];
+      context = container;
+    }
+
+    return {
+      container: container,
+      apply: function() {
+        if (body) {
+          body.appendChild(container);
+        }
+      },
+      evener: function(remove?: boolean) {
+        if (remove) {
+          (context as HTMLElement).removeEventListener('mousedown', mouseDown);
+          (context as HTMLElement).removeEventListener('mousemove', mousemove);
+          (context as HTMLElement).removeEventListener('mouseup', mouseup as any);
+        } else {
+          setTimeout(function() {
+            (context as HTMLElement).addEventListener('mousedown', mouseDown);
+            (context as HTMLElement).addEventListener('mousemove', mousemove);
+            (context as HTMLElement).addEventListener('mouseup', mouseup as any);
+          }, 100);
+        }
+      },
     };
   }
 }

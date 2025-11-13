@@ -71,7 +71,7 @@ export const slideTransition: TransitionFunction = async (
 export const fadeTransition: TransitionFunction = async (
   fromElement: HTMLImageElement,
   toElement: HTMLImageElement,
-  direction: 'forward' | 'backward',
+  _direction: 'forward' | 'backward',
   duration: number,
   container: HTMLElement
 ): Promise<void> => {
@@ -123,8 +123,8 @@ export const fadeTransition: TransitionFunction = async (
 export const noneTransition: TransitionFunction = async (
   fromElement: HTMLImageElement,
   toElement: HTMLImageElement,
-  direction: 'forward' | 'backward',
-  duration: number,
+  _direction: 'forward' | 'backward',
+  _duration: number,
   container: HTMLElement
 ): Promise<void> => {
   return new Promise((resolve) => {

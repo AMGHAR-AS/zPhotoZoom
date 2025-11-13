@@ -50,6 +50,11 @@ export class Preloader implements IPreloader {
 
     const imageData = this.images[index];
 
+    // Validate imageData exists
+    if (!imageData) {
+      return Promise.reject(new Error(`Image data not found at index: ${index}`));
+    }
+
     // Already loaded
     if (imageData.loaded || this.loadedIndices.has(index)) {
       return Promise.resolve();
@@ -103,13 +108,15 @@ export class Preloader implements IPreloader {
 
     // Next image
     const nextIndex = (currentIndex + 1) % totalImages;
-    if (!this.images[nextIndex].loaded && !this.loadedIndices.has(nextIndex)) {
+    const nextImage = this.images[nextIndex];
+    if (nextImage && !nextImage.loaded && !this.loadedIndices.has(nextIndex)) {
       toPreload.push(nextIndex);
     }
 
     // Previous image
     const prevIndex = currentIndex === 0 ? totalImages - 1 : currentIndex - 1;
-    if (!this.images[prevIndex].loaded && !this.loadedIndices.has(prevIndex)) {
+    const prevImage = this.images[prevIndex];
+    if (prevImage && !prevImage.loaded && !this.loadedIndices.has(prevIndex)) {
       toPreload.push(prevIndex);
     }
 
@@ -133,7 +140,8 @@ export class Preloader implements IPreloader {
     const toPreload: number[] = [];
 
     for (let i = 0; i < this.images.length; i++) {
-      if (!this.images[i].loaded && !this.loadedIndices.has(i)) {
+      const img = this.images[i];
+      if (img && !img.loaded && !this.loadedIndices.has(i)) {
         toPreload.push(i);
       }
     }

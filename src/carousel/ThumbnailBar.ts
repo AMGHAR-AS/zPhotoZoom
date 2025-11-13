@@ -126,13 +126,19 @@ export class ThumbnailBar implements IThumbnailBar {
 
     // Remove active class from current
     if (this.currentIndex >= 0 && this.currentIndex < this.thumbnails.length) {
-      this.thumbnails[this.currentIndex].classList.remove('zpz-tb-active');
-      this.thumbnails[this.currentIndex].setAttribute('aria-selected', 'false');
+      const currentThumb = this.thumbnails[this.currentIndex];
+      if (currentThumb) {
+        currentThumb.classList.remove('zpz-tb-active');
+        currentThumb.setAttribute('aria-selected', 'false');
+      }
     }
 
     // Add active class to new
-    this.thumbnails[index].classList.add('zpz-tb-active');
-    this.thumbnails[index].setAttribute('aria-selected', 'true');
+    const newThumb = this.thumbnails[index];
+    if (newThumb) {
+      newThumb.classList.add('zpz-tb-active');
+      newThumb.setAttribute('aria-selected', 'true');
+    }
 
     this.currentIndex = index;
 
