@@ -55,8 +55,11 @@ const injectCarouselStyles = (): void => {
       width: 100%;
       height: 100%;
       display: flex;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       will-change: transform;
+    }
+
+    .zpz-slides-wrapper.zpz-transitioning {
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .zpz-slide {
@@ -67,6 +70,27 @@ const injectCarouselStyles = (): void => {
       display: flex;
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .zpz-slide.zpz-slide-active {
+      opacity: 1;
+    }
+
+    .zpz-slide.zpz-slide-entering {
+      animation: slideEnter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes slideEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     .zpz-slide img {
@@ -91,25 +115,31 @@ const injectCarouselStyles = (): void => {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      width: 50px;
-      height: 50px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       outline: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .zpz-arrow:hover:not(:disabled) {
-      background: rgba(102, 126, 234, 0.8);
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(76, 96, 204, 0.8) 100%);
       border-color: rgba(102, 126, 234, 1);
-      transform: translateY(-50%) scale(1.1);
+      transform: translateY(-50%) scale(1.15);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .zpz-arrow:hover:not(:disabled) svg {
+      transform: scale(1.1);
     }
 
     .zpz-arrow:active:not(:disabled) {
@@ -117,27 +147,29 @@ const injectCarouselStyles = (): void => {
     }
 
     .zpz-arrow:disabled {
-      opacity: 0.3;
+      opacity: 0.25;
       cursor: not-allowed;
+      background: rgba(0, 0, 0, 0.3);
     }
 
     .zpz-arrow:focus-visible {
-      outline: 2px solid #667eea;
-      outline-offset: 2px;
+      outline: 3px solid #667eea;
+      outline-offset: 3px;
     }
 
     .zpz-arrow-prev {
-      left: 20px;
+      left: 24px;
     }
 
     .zpz-arrow-next {
-      right: 20px;
+      right: 24px;
     }
 
     .zpz-arrow svg {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       fill: none;
+      transition: transform 0.2s ease;
     }
 
     /* Counter */
@@ -339,26 +371,47 @@ const injectCarouselStyles = (): void => {
       }
 
       .zpz-arrow {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
       }
 
       .zpz-arrow svg {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
       }
 
       .zpz-arrow-prev {
-        left: 10px;
+        left: 12px;
       }
 
       .zpz-arrow-next {
-        right: 10px;
+        right: 12px;
       }
 
       .zpz-counter {
         font-size: 14px;
         padding: 6px 12px;
+      }
+    }
+
+    /* Extra small screens */
+    @media (max-width: 480px) {
+      .zpz-arrow {
+        width: 44px;
+        height: 44px;
+      }
+
+      .zpz-arrow svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .zpz-arrow-prev {
+        left: 8px;
+      }
+
+      .zpz-arrow-next {
+        right: 8px;
       }
     }
   `;
@@ -774,6 +827,7 @@ export class zPhotoCarousel extends zPhotoZoom {
 
     if (prevIndex !== index) {
       const prevSlide = this.getOrCreateSlide(prevIndex);
+      prevSlide.classList.remove('zpz-slide-active', 'zpz-slide-entering');
       this._slidesWrapper!.appendChild(prevSlide);
     } else {
       // Placeholder
@@ -783,10 +837,12 @@ export class zPhotoCarousel extends zPhotoZoom {
     }
 
     const currentSlide = this.getOrCreateSlide(index);
+    currentSlide.classList.remove('zpz-slide-active', 'zpz-slide-entering');
     this._slidesWrapper!.appendChild(currentSlide);
 
     if (nextIndex !== index) {
       const nextSlide = this.getOrCreateSlide(nextIndex);
+      nextSlide.classList.remove('zpz-slide-active', 'zpz-slide-entering');
       this._slidesWrapper!.appendChild(nextSlide);
     } else {
       // Placeholder
@@ -797,18 +853,40 @@ export class zPhotoCarousel extends zPhotoZoom {
 
     // Position to show current slide (middle one)
     if (withTransition && this.process.currentImage) {
-      // Disable transition temporarily to position without animation
-      this._slidesWrapper!.style.transition = 'none';
+      // Smooth transition
+      this._slidesWrapper!.classList.remove('zpz-transitioning');
       this._slidesWrapper!.style.transform = 'translateX(-100%)';
 
       // Force reflow
       void this._slidesWrapper!.offsetHeight;
 
-      // Re-enable transition
-      this._slidesWrapper!.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      // Add transition class and trigger animation
+      this._slidesWrapper!.classList.add('zpz-transitioning');
+
+      // Animate current slide with entering animation
+      requestAnimationFrame(() => {
+        currentSlide.classList.add('zpz-slide-entering');
+
+        // Remove entering class after animation
+        setTimeout(() => {
+          currentSlide.classList.remove('zpz-slide-entering');
+          currentSlide.classList.add('zpz-slide-active');
+        }, 500);
+      });
     } else {
-      // First image, just position
+      // First image - smooth entrance
+      this._slidesWrapper!.classList.remove('zpz-transitioning');
       this._slidesWrapper!.style.transform = 'translateX(-100%)';
+
+      // Animate entrance for first image
+      requestAnimationFrame(() => {
+        currentSlide.classList.add('zpz-slide-entering');
+
+        setTimeout(() => {
+          currentSlide.classList.remove('zpz-slide-entering');
+          currentSlide.classList.add('zpz-slide-active');
+        }, 500);
+      });
     }
 
     // Update current image

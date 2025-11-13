@@ -1841,21 +1841,31 @@ class NavigationArrows {
    */
   createArrowIcon(direction) {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("width", "24");
-    svg.setAttribute("height", "24");
+    svg.setAttribute("width", "28");
+    svg.setAttribute("height", "28");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("fill", "none");
     svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-width", "2.5");
     svg.setAttribute("stroke-linecap", "round");
     svg.setAttribute("stroke-linejoin", "round");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     if (direction === "prev") {
-      path.setAttribute("d", "M15 18l-6-6 6-6");
+      const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path1.setAttribute("d", "M15 18l-6-6 6-6");
+      svg.appendChild(path1);
+      const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path2.setAttribute("d", "M19 18l-6-6 6-6");
+      path2.setAttribute("opacity", "0.5");
+      svg.appendChild(path2);
     } else {
-      path.setAttribute("d", "M9 18l6-6-6-6");
+      const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path1.setAttribute("d", "M9 18l6-6-6-6");
+      svg.appendChild(path1);
+      const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path2.setAttribute("d", "M5 18l6-6-6-6");
+      path2.setAttribute("opacity", "0.5");
+      svg.appendChild(path2);
     }
-    svg.appendChild(path);
     return svg;
   }
   /**
@@ -1980,8 +1990,11 @@ const injectCarouselStyles = () => {
       width: 100%;
       height: 100%;
       display: flex;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       will-change: transform;
+    }
+
+    .zpz-slides-wrapper.zpz-transitioning {
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .zpz-slide {
@@ -1992,6 +2005,27 @@ const injectCarouselStyles = () => {
       display: flex;
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .zpz-slide.zpz-slide-active {
+      opacity: 1;
+    }
+
+    .zpz-slide.zpz-slide-entering {
+      animation: slideEnter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes slideEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     .zpz-slide img {
@@ -2016,25 +2050,31 @@ const injectCarouselStyles = () => {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      width: 50px;
-      height: 50px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.5) 100%);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       outline: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
 
     .zpz-arrow:hover:not(:disabled) {
-      background: rgba(102, 126, 234, 0.8);
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(76, 96, 204, 0.8) 100%);
       border-color: rgba(102, 126, 234, 1);
-      transform: translateY(-50%) scale(1.1);
+      transform: translateY(-50%) scale(1.15);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .zpz-arrow:hover:not(:disabled) svg {
+      transform: scale(1.1);
     }
 
     .zpz-arrow:active:not(:disabled) {
@@ -2042,27 +2082,29 @@ const injectCarouselStyles = () => {
     }
 
     .zpz-arrow:disabled {
-      opacity: 0.3;
+      opacity: 0.25;
       cursor: not-allowed;
+      background: rgba(0, 0, 0, 0.3);
     }
 
     .zpz-arrow:focus-visible {
-      outline: 2px solid #667eea;
-      outline-offset: 2px;
+      outline: 3px solid #667eea;
+      outline-offset: 3px;
     }
 
     .zpz-arrow-prev {
-      left: 20px;
+      left: 24px;
     }
 
     .zpz-arrow-next {
-      right: 20px;
+      right: 24px;
     }
 
     .zpz-arrow svg {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       fill: none;
+      transition: transform 0.2s ease;
     }
 
     /* Counter */
@@ -2264,26 +2306,47 @@ const injectCarouselStyles = () => {
       }
 
       .zpz-arrow {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
       }
 
       .zpz-arrow svg {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
       }
 
       .zpz-arrow-prev {
-        left: 10px;
+        left: 12px;
       }
 
       .zpz-arrow-next {
-        right: 10px;
+        right: 12px;
       }
 
       .zpz-counter {
         font-size: 14px;
         padding: 6px 12px;
+      }
+    }
+
+    /* Extra small screens */
+    @media (max-width: 480px) {
+      .zpz-arrow {
+        width: 44px;
+        height: 44px;
+      }
+
+      .zpz-arrow svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .zpz-arrow-prev {
+        left: 8px;
+      }
+
+      .zpz-arrow-next {
+        right: 8px;
       }
     }
   `;
@@ -2559,6 +2622,7 @@ class zPhotoCarousel extends zPhotoZoom {
     this._slidesWrapper.innerHTML = "";
     if (prevIndex !== index) {
       const prevSlide = this.getOrCreateSlide(prevIndex);
+      prevSlide.classList.remove("zpz-slide-active", "zpz-slide-entering");
       this._slidesWrapper.appendChild(prevSlide);
     } else {
       const placeholder = document.createElement("div");
@@ -2566,9 +2630,11 @@ class zPhotoCarousel extends zPhotoZoom {
       this._slidesWrapper.appendChild(placeholder);
     }
     const currentSlide = this.getOrCreateSlide(index);
+    currentSlide.classList.remove("zpz-slide-active", "zpz-slide-entering");
     this._slidesWrapper.appendChild(currentSlide);
     if (nextIndex !== index) {
       const nextSlide = this.getOrCreateSlide(nextIndex);
+      nextSlide.classList.remove("zpz-slide-active", "zpz-slide-entering");
       this._slidesWrapper.appendChild(nextSlide);
     } else {
       const placeholder = document.createElement("div");
@@ -2576,12 +2642,27 @@ class zPhotoCarousel extends zPhotoZoom {
       this._slidesWrapper.appendChild(placeholder);
     }
     if (withTransition && this.process.currentImage) {
-      this._slidesWrapper.style.transition = "none";
+      this._slidesWrapper.classList.remove("zpz-transitioning");
       this._slidesWrapper.style.transform = "translateX(-100%)";
       void this._slidesWrapper.offsetHeight;
-      this._slidesWrapper.style.transition = "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)";
+      this._slidesWrapper.classList.add("zpz-transitioning");
+      requestAnimationFrame(() => {
+        currentSlide.classList.add("zpz-slide-entering");
+        setTimeout(() => {
+          currentSlide.classList.remove("zpz-slide-entering");
+          currentSlide.classList.add("zpz-slide-active");
+        }, 500);
+      });
     } else {
+      this._slidesWrapper.classList.remove("zpz-transitioning");
       this._slidesWrapper.style.transform = "translateX(-100%)";
+      requestAnimationFrame(() => {
+        currentSlide.classList.add("zpz-slide-entering");
+        setTimeout(() => {
+          currentSlide.classList.remove("zpz-slide-entering");
+          currentSlide.classList.add("zpz-slide-active");
+        }, 500);
+      });
     }
     this.updateCurrentImage(image);
   }

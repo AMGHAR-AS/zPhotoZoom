@@ -81,26 +81,37 @@ export class NavigationArrows implements INavigationArrows {
    */
   private createArrowIcon(direction: 'prev' | 'next'): SVGElement {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', '24');
-    svg.setAttribute('height', '24');
+    svg.setAttribute('width', '28');
+    svg.setAttribute('height', '28');
     svg.setAttribute('viewBox', '0 0 24 24');
     svg.setAttribute('fill', 'none');
     svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-width', '2.5');
     svg.setAttribute('stroke-linecap', 'round');
     svg.setAttribute('stroke-linejoin', 'round');
 
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-
     if (direction === 'prev') {
-      // Left arrow
-      path.setAttribute('d', 'M15 18l-6-6 6-6');
+      // Modern left chevron with double lines for emphasis
+      const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path1.setAttribute('d', 'M15 18l-6-6 6-6');
+      svg.appendChild(path1);
+
+      const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path2.setAttribute('d', 'M19 18l-6-6 6-6');
+      path2.setAttribute('opacity', '0.5');
+      svg.appendChild(path2);
     } else {
-      // Right arrow
-      path.setAttribute('d', 'M9 18l6-6-6-6');
+      // Modern right chevron with double lines for emphasis
+      const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path1.setAttribute('d', 'M9 18l6-6-6-6');
+      svg.appendChild(path1);
+
+      const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path2.setAttribute('d', 'M5 18l6-6-6-6');
+      path2.setAttribute('opacity', '0.5');
+      svg.appendChild(path2);
     }
 
-    svg.appendChild(path);
     return svg;
   }
 
