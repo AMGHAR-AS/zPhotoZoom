@@ -321,12 +321,13 @@
       </p>
     </footer>
   </div>
-  <script src="../dist/photo-zoom.js"></script>
-
   <!-- Include zPhotoZoom Library -->
-  <script type="module">
-    // In production, use: import zPhotoZoom from 'photo-zoom';
-    // For this demo, we'll create a simple initialization
+  <script src="../dist/zphotozoom.umd.js"></script>
+
+  <script>
+    // The UMD build exposes the library as window.zPhotoZoomLib
+    // Extract zPhotoZoom from the library
+    const { default: zPhotoZoom } = window.zPhotoZoomLib;
 
     // Update status display
     function updateStatus(message) {

@@ -17,51 +17,77 @@ export const slideTransition: TransitionFunction = async (
   duration: number,
   container: HTMLElement
 ): Promise<void> => {
-  return new Promise((resolve) => {
-    // Calculate offsets based on direction
-    const startOffset = direction === 'forward' ? '100%' : '-100%';
-    const endOffset = direction === 'forward' ? '-100%' : '100%';
+  return new Promise((resolve, reject) => {
+    // Validate inputs
+    if (!fromElement || !toElement || !container) {
+      reject(new Error('Transition requires valid fromElement, toElement, and container'));
+      return;
+    }
 
-    // Position new image off-screen
-    toElement.style.position = 'absolute';
-    toElement.style.top = '0';
-    toElement.style.left = '0';
-    toElement.style.width = '100%';
-    toElement.style.height = '100%';
-    toElement.style.transform = `translateX(${startOffset})`;
-    toElement.style.opacity = '1';
+    if (!container.contains(fromElement) && fromElement.parentNode) {
+      console.warn('zPhotoCarousel: fromElement is not in the expected container');
+    }
 
-    // Add to DOM
-    container.appendChild(toElement);
+    try {
+      // Calculate offsets based on direction
+      const startOffset = direction === 'forward' ? '100%' : '-100%';
+      const endOffset = direction === 'forward' ? '-100%' : '100%';
 
-    // Force reflow to ensure initial position is applied
-    toElement.offsetHeight;
+      // Position new image off-screen
+      toElement.style.position = 'absolute';
+      toElement.style.top = '0';
+      toElement.style.left = '0';
+      toElement.style.width = '100%';
+      toElement.style.height = '100%';
+      toElement.style.transform = `translateX(${startOffset})`;
+      toElement.style.opacity = '1';
 
-    // Setup transitions
-    const timing = 'cubic-bezier(0.4, 0, 0.2, 1)';
-    fromElement.style.transition = `transform ${duration}ms ${timing}`;
-    toElement.style.transition = `transform ${duration}ms ${timing}`;
-
-    // Trigger animations
-    fromElement.style.transform = `translateX(${endOffset})`;
-    toElement.style.transform = 'translateX(0)';
-
-    // Cleanup after transition
-    setTimeout(() => {
-      if (fromElement.parentNode === container) {
-        container.removeChild(fromElement);
+      // Add to DOM (handle if already in DOM)
+      if (toElement.parentNode !== container) {
+        container.appendChild(toElement);
       }
 
-      // Reset styles
-      fromElement.style.transform = '';
-      fromElement.style.transition = '';
-      fromElement.style.position = '';
+      // Force reflow to ensure initial position is applied
+      void toElement.offsetHeight;
 
-      toElement.style.transition = '';
-      toElement.style.position = '';
+      // Setup transitions
+      const timing = 'cubic-bezier(0.4, 0, 0.2, 1)';
+      fromElement.style.transition = `transform ${duration}ms ${timing}`;
+      toElement.style.transition = `transform ${duration}ms ${timing}`;
 
-      resolve();
-    }, duration);
+      // Trigger animations
+      fromElement.style.transform = `translateX(${endOffset})`;
+      toElement.style.transform = 'translateX(0)';
+
+      // Cleanup after transition
+      const timeoutId = setTimeout(() => {
+        try {
+          if (fromElement.parentNode === container) {
+            container.removeChild(fromElement);
+          }
+
+          // Reset styles
+          fromElement.style.transform = '';
+          fromElement.style.transition = '';
+          fromElement.style.position = '';
+
+          toElement.style.transition = '';
+          toElement.style.position = '';
+
+          resolve();
+        } catch (cleanupError) {
+          console.error('zPhotoCarousel: Error during transition cleanup:', cleanupError);
+          resolve(); // Resolve anyway to prevent hanging
+        }
+      }, duration);
+
+      // Store timeout ID on element for potential cancellation
+      (toElement as any).__transitionTimeoutId = timeoutId;
+
+    } catch (error) {
+      console.error('zPhotoCarousel: Error during slide transition:', error);
+      reject(error);
+    }
   });
 };
 
@@ -75,45 +101,71 @@ export const fadeTransition: TransitionFunction = async (
   duration: number,
   container: HTMLElement
 ): Promise<void> => {
-  return new Promise((resolve) => {
-    // Position new image on top (invisible)
-    toElement.style.position = 'absolute';
-    toElement.style.top = '0';
-    toElement.style.left = '0';
-    toElement.style.width = '100%';
-    toElement.style.height = '100%';
-    toElement.style.opacity = '0';
+  return new Promise((resolve, reject) => {
+    // Validate inputs
+    if (!fromElement || !toElement || !container) {
+      reject(new Error('Transition requires valid fromElement, toElement, and container'));
+      return;
+    }
 
-    // Add to DOM
-    container.appendChild(toElement);
+    if (!container.contains(fromElement) && fromElement.parentNode) {
+      console.warn('zPhotoCarousel: fromElement is not in the expected container');
+    }
 
-    // Force reflow
-    toElement.offsetHeight;
+    try {
+      // Position new image on top (invisible)
+      toElement.style.position = 'absolute';
+      toElement.style.top = '0';
+      toElement.style.left = '0';
+      toElement.style.width = '100%';
+      toElement.style.height = '100%';
+      toElement.style.opacity = '0';
 
-    // Setup transitions
-    fromElement.style.transition = `opacity ${duration}ms ease`;
-    toElement.style.transition = `opacity ${duration}ms ease`;
-
-    // Trigger cross-fade
-    fromElement.style.opacity = '0';
-    toElement.style.opacity = '1';
-
-    // Cleanup after transition
-    setTimeout(() => {
-      if (fromElement.parentNode === container) {
-        container.removeChild(fromElement);
+      // Add to DOM (handle if already in DOM)
+      if (toElement.parentNode !== container) {
+        container.appendChild(toElement);
       }
 
-      // Reset styles
-      fromElement.style.opacity = '';
-      fromElement.style.transition = '';
-      fromElement.style.position = '';
+      // Force reflow
+      void toElement.offsetHeight;
 
-      toElement.style.transition = '';
-      toElement.style.position = '';
+      // Setup transitions
+      fromElement.style.transition = `opacity ${duration}ms ease`;
+      toElement.style.transition = `opacity ${duration}ms ease`;
 
-      resolve();
-    }, duration);
+      // Trigger cross-fade
+      fromElement.style.opacity = '0';
+      toElement.style.opacity = '1';
+
+      // Cleanup after transition
+      const timeoutId = setTimeout(() => {
+        try {
+          if (fromElement.parentNode === container) {
+            container.removeChild(fromElement);
+          }
+
+          // Reset styles
+          fromElement.style.opacity = '';
+          fromElement.style.transition = '';
+          fromElement.style.position = '';
+
+          toElement.style.transition = '';
+          toElement.style.position = '';
+
+          resolve();
+        } catch (cleanupError) {
+          console.error('zPhotoCarousel: Error during transition cleanup:', cleanupError);
+          resolve(); // Resolve anyway to prevent hanging
+        }
+      }, duration);
+
+      // Store timeout ID on element for potential cancellation
+      (toElement as any).__transitionTimeoutId = timeoutId;
+
+    } catch (error) {
+      console.error('zPhotoCarousel: Error during fade transition:', error);
+      reject(error);
+    }
   });
 };
 
@@ -127,16 +179,29 @@ export const noneTransition: TransitionFunction = async (
   _duration: number,
   container: HTMLElement
 ): Promise<void> => {
-  return new Promise((resolve) => {
-    // Add new image
-    container.appendChild(toElement);
-
-    // Remove old image
-    if (fromElement.parentNode === container) {
-      container.removeChild(fromElement);
+  return new Promise((resolve, reject) => {
+    // Validate inputs
+    if (!fromElement || !toElement || !container) {
+      reject(new Error('Transition requires valid fromElement, toElement, and container'));
+      return;
     }
 
-    resolve();
+    try {
+      // Add new image (handle if already in DOM)
+      if (toElement.parentNode !== container) {
+        container.appendChild(toElement);
+      }
+
+      // Remove old image
+      if (fromElement.parentNode === container) {
+        container.removeChild(fromElement);
+      }
+
+      resolve();
+    } catch (error) {
+      console.error('zPhotoCarousel: Error during instant transition:', error);
+      reject(error);
+    }
   });
 };
 

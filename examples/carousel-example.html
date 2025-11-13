@@ -372,14 +372,13 @@
     </footer>
   </div>
 
-  <!-- Load zPhotoZoom Carousel -->
-  <script type="module">
-    // Import zPhotoCarousel (in production: import { zPhotoCarousel } from 'zphotozoom')
-    // For this demo, we'll assume it's loaded globally
+  <!-- Load zPhotoZoom Carousel Library -->
+  <script src="../dist/zphotozoom.umd.js"></script>
 
-    // Note: This example assumes zPhotoCarousel is available.
-    // In production, you would import it properly:
-    // import { zPhotoCarousel } from 'zphotozoom';
+  <script>
+    // The UMD build exposes the library as window.zPhotoZoomLib
+    // Extract zPhotoCarousel from the library
+    const { zPhotoCarousel } = window.zPhotoZoomLib;
 
     // For demonstration purposes, show a helpful message
     console.log(`
@@ -423,10 +422,10 @@
 
     // Initialize carousel when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-      // Check if zPhotoCarousel is available
-      if (typeof zPhotoCarousel === 'undefined') {
-        console.error('zPhotoCarousel not found. Please build and include the library.');
-        updateStatus('❌ Error: zPhotoCarousel not loaded. Please build the library first.');
+      // Check if library is available
+      if (typeof window.zPhotoZoomLib === 'undefined' || !zPhotoCarousel) {
+        console.error('zPhotoZoomLib not found. Please run "npm run build" first.');
+        updateStatus('❌ Error: Library not loaded. Please build the project first (npm run build).');
         return;
       }
 

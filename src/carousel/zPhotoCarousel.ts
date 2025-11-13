@@ -6,7 +6,6 @@
  * @author AMGHAR Abdeslam
  */
 
-//@ts-nocheck
 import zPhotoZoom from '../zphotozoom';
 import type {
   CarouselOptions,
@@ -15,8 +14,7 @@ import type {
   NavigateEvent,
   SlideChangeEvent,
   NavigateEventCallback,
-  SlideChangeEventCallback,
-  DEFAULT_CAROUSEL_OPTIONS
+  SlideChangeEventCallback
 } from './CarouselTypes';
 
 import { KeyboardNav } from './KeyboardNav';
@@ -306,7 +304,28 @@ const injectCarouselStyles = (): void => {
  */
 export class zPhotoCarousel extends zPhotoZoom {
   private _carouselState: CarouselState;
-  private _carouselOptions: CarouselOptions;
+  private _carouselOptions: CarouselOptions & {
+    carousel: boolean;
+    loop: boolean;
+    startIndex: number;
+    enableThumbnails: boolean;
+    thumbnailHeight: number;
+    thumbnailPosition: 'top' | 'bottom' | 'left' | 'right';
+    thumbnailsVisible: number;
+    enableKeyboard: boolean;
+    enableArrows: boolean;
+    arrowPosition: 'center' | 'bottom';
+    enableSwipe: boolean;
+    transition: 'slide' | 'fade' | 'none';
+    transitionDuration: number;
+    autoPlay: boolean;
+    autoPlayInterval: number;
+    pauseOnHover: boolean;
+    preloadAdjacent: boolean;
+    preloadAll: boolean;
+    showCounter: boolean;
+    counterPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  };
 
   // Components
   private _thumbnailBar?: ThumbnailBar;
@@ -322,6 +341,17 @@ export class zPhotoCarousel extends zPhotoZoom {
 
   // UI elements
   private _mainImageContainer?: HTMLElement;
+
+  // Store click handlers for proper cleanup
+  private _clickHandlers: Map<HTMLElement, (e: Event) => void> = new Map();
+
+  // Store hover handlers for pauseOnHover
+  private _hoverHandlers: { mouseenter: () => void; mouseleave: () => void } | null = null;
+
+  // Helper to access parent's private _process (type assertion)
+  private get process(): any {
+    return (this as any)._process;
+  }
 
   constructor(options: CarouselOptions, context?: Document) {
     // Inject carousel styles
@@ -358,7 +388,7 @@ export class zPhotoCarousel extends zPhotoZoom {
     // Initialize carousel state
     this._carouselState = {
       currentIndex: this._carouselOptions.startIndex,
-      totalImages: this._process.images.length,
+      totalImages: this.process.images.length,
       isPlaying: false,
       playTimer: null,
       isTransitioning: false,
@@ -378,29 +408,40 @@ export class zPhotoCarousel extends zPhotoZoom {
     }
 
     // Add indices to images
-    this._process.images.forEach((img: ImageDataExtended, index: number) => {
+    this.process.images.forEach((img: ImageDataExtended, index: number) => {
       img.index = index;
     });
 
     // Initialize preloader
     if (this._carouselOptions.preloadAdjacent || this._carouselOptions.preloadAll) {
       this._preloader = new Preloader({
-        images: this._process.images as ImageDataExtended[],
+        images: this.process.images as ImageDataExtended[],
         preloadAdjacent: this._carouselOptions.preloadAdjacent,
         preloadAll: this._carouselOptions.preloadAll
       });
     }
 
     // Override image click handlers to open in carousel mode
-    this._process.images.forEach((img: ImageDataExtended, index: number) => {
-      // Remove default click handler and add carousel handler
+    this.process.images.forEach((img: ImageDataExtended, index: number) => {
+      // First, remove parent's default event handlers
+      if (img.evener) {
+        img.evener.remove();
+      }
+
+      // Remove any existing carousel click handler
+      const existingHandler = this._clickHandlers.get(img.node);
+      if (existingHandler) {
+        img.node.removeEventListener('click', existingHandler);
+      }
+
+      // Create and store new carousel click handler
       const clickHandler = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
         this.openCarouselAt(index);
       };
 
-      img.node.removeEventListener('click', clickHandler);
+      this._clickHandlers.set(img.node, clickHandler);
       img.node.addEventListener('click', clickHandler);
     });
   }
@@ -412,7 +453,7 @@ export class zPhotoCarousel extends zPhotoZoom {
     this._carouselState.currentIndex = index;
 
     // Call parent open but with carousel modifications
-    const image = this._process.images[index];
+    const image = this.process.images[index];
 
     // Open the viewer (will trigger onOpen callbacks)
     this.openCarouselViewer(image as ImageDataExtended);
@@ -424,14 +465,14 @@ export class zPhotoCarousel extends zPhotoZoom {
   private openCarouselViewer(image: ImageDataExtended): void {
     // Trigger parent onOpen events
     let prevent = false;
-    for (let i = 0; i < this._process.eventsOpen.length; i++) {
+    for (let i = 0; i < this.process.eventsOpen.length; i++) {
       const event = {
         preventDefault: () => { prevent = true; },
         stopPropagation: () => {},
         target: image.node,
         instance: this
       };
-      this._process.eventsOpen[i](event);
+      this.process.eventsOpen[i](event);
       if (prevent) return;
     }
 
@@ -460,13 +501,13 @@ export class zPhotoCarousel extends zPhotoZoom {
    */
   private createCarouselStructure(): void {
     // Get or create preview container
-    if (!this._process.preview) {
+    if (!this.process.preview) {
       const containerPreview = this.getContainerPreview();
-      this._process.preview = containerPreview;
-      this._process.preview.apply();
+      this.process.preview = containerPreview;
+      this.process.preview.apply();
     }
 
-    const container = (this._process.preview as any).container;
+    const container = (this.process.preview as any).container;
     container.classList.add('zpz-carousel-mode');
 
     // Create main image container
@@ -479,7 +520,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    * Setup carousel UI components
    */
   private setupCarouselComponents(): void {
-    const container = (this._process.preview as any).container;
+    const container = (this.process.preview as any).container;
 
     // Add navigation arrows
     if (this._carouselOptions.enableArrows) {
@@ -509,7 +550,7 @@ export class zPhotoCarousel extends zPhotoZoom {
     // Add thumbnail bar
     if (this._carouselOptions.enableThumbnails) {
       this._thumbnailBar = new ThumbnailBar({
-        images: this._process.images as ImageDataExtended[],
+        images: this.process.images as ImageDataExtended[],
         position: this._carouselOptions.thumbnailPosition,
         height: this._carouselOptions.thumbnailHeight,
         visibleCount: this._carouselOptions.thumbnailsVisible,
@@ -541,9 +582,14 @@ export class zPhotoCarousel extends zPhotoZoom {
         onSwipeRight: () => this.previous(),
         isEnabled: () => {
           // Only enable swipe when image is not zoomed
-          return this._process.currentImage?.scale === this._process.currentImage?.origin.scale;
+          return this.process.currentImage?.scale === this.process.currentImage?.origin.scale;
         }
       });
+    }
+
+    // Setup pause on hover
+    if (this._carouselOptions.pauseOnHover && this._carouselOptions.autoPlay) {
+      this.setupPauseOnHover(container);
     }
   }
 
@@ -551,7 +597,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    * Display image at index
    */
   private async displayImage(index: number, withTransition: boolean = true): Promise<void> {
-    const image = this._process.images[index] as ImageDataExtended;
+    const image = this.process.images[index] as ImageDataExtended;
 
     if (!image) {
       console.error('zPhotoCarousel: Invalid image index:', index);
@@ -570,14 +616,14 @@ export class zPhotoCarousel extends zPhotoZoom {
     }
 
     // If this is the first image or no transition, just add it
-    if (!this._process.currentImage || !withTransition) {
+    if (!this.process.currentImage || !withTransition) {
       this._mainImageContainer!.appendChild(imageNode);
       this.updateCurrentImage(image);
       return;
     }
 
     // Perform transition
-    const currentImageNode = this._process.currentImage.imageNode;
+    const currentImageNode = this.process.currentImage.imageNode;
     const transitionFn = getTransition(this._carouselOptions.transition);
     const direction = this._carouselState.direction || 'forward';
 
@@ -604,7 +650,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    */
   private updateCurrentImage(image: ImageDataExtended): void {
     // Update process.currentImage to maintain compatibility with parent
-    this._process.currentImage = {
+    this.process.currentImage = {
       image: image,
       imageNode: image.imageNode!,
       animate: false,
@@ -613,8 +659,8 @@ export class zPhotoCarousel extends zPhotoZoom {
       scale: 1,
       origin: {} as any,
       center: { x: 0, y: 0 },
-      minScale: this._process.scaleLimit.min,
-      maxScale: this._process.scaleLimit.max,
+      minScale: this.process.scaleLimit.min,
+      maxScale: this.process.scaleLimit.max,
       x: 0,
       y: 0,
       width: () => image.imageNode!.offsetWidth,
@@ -697,7 +743,7 @@ export class zPhotoCarousel extends zPhotoZoom {
     direction: 'forward' | 'backward'
   ): Promise<void> {
     const fromIndex = this._carouselState.currentIndex;
-    const image = this._process.images[index] as ImageDataExtended;
+    const image = this.process.images[index] as ImageDataExtended;
 
     // Trigger navigate event
     let prevent = false;
@@ -862,7 +908,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    * Get all images
    */
   public getImages(): ImageDataExtended[] {
-    return this._process.images as ImageDataExtended[];
+    return this.process.images as ImageDataExtended[];
   }
 
   /**
@@ -912,6 +958,57 @@ export class zPhotoCarousel extends zPhotoZoom {
     }
   }
 
+  /**
+   * Setup pause on hover functionality
+   */
+  private setupPauseOnHover(container: HTMLElement): void {
+    // Track if we manually paused (so we don't resume if user paused)
+    let wasPausedManually = false;
+
+    const handleMouseEnter = () => {
+      if (this._carouselState.isPlaying) {
+        wasPausedManually = false;
+        this.pause();
+      } else {
+        wasPausedManually = true;
+      }
+    };
+
+    const handleMouseLeave = () => {
+      // Only resume if it wasn't paused manually before hovering
+      if (!wasPausedManually && this._carouselOptions.autoPlay) {
+        this.play();
+      }
+    };
+
+    // Store handlers for cleanup
+    this._hoverHandlers = {
+      mouseenter: handleMouseEnter,
+      mouseleave: handleMouseLeave
+    };
+
+    // Attach listeners
+    container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('mouseleave', handleMouseLeave);
+  }
+
+  /**
+   * Cleanup pause on hover listeners
+   */
+  private cleanupPauseOnHover(): void {
+    if (!this._hoverHandlers) {
+      return;
+    }
+
+    const container = (this.process.preview as any)?.container;
+    if (container) {
+      container.removeEventListener('mouseenter', this._hoverHandlers.mouseenter);
+      container.removeEventListener('mouseleave', this._hoverHandlers.mouseleave);
+    }
+
+    this._hoverHandlers = null;
+  }
+
   // ========================================================================
   // Cleanup
   // ========================================================================
@@ -919,7 +1016,7 @@ export class zPhotoCarousel extends zPhotoZoom {
   /**
    * Override close to cleanup carousel components
    */
-  public close(): void {
+  public override close(): void {
     // Pause slideshow
     this.pause();
 
@@ -930,8 +1027,30 @@ export class zPhotoCarousel extends zPhotoZoom {
     this._navigationArrows?.destroy();
     this._counter?.destroy();
 
+    // Clean up event handlers
+    this.cleanupClickHandlers();
+    this.cleanupPauseOnHover();
+
     // Call parent close
     super.close();
+  }
+
+  /**
+   * Clean up carousel click handlers and restore parent handlers
+   */
+  private cleanupClickHandlers(): void {
+    // Remove carousel click handlers
+    this._clickHandlers.forEach((handler, node) => {
+      node.removeEventListener('click', handler);
+    });
+    this._clickHandlers.clear();
+
+    // Restore parent's event handlers
+    this.process.images.forEach((img: ImageDataExtended) => {
+      if (img.evener) {
+        img.evener.apply();
+      }
+    });
   }
 
   /**
@@ -939,7 +1058,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    */
   private getContainerPreview(): any {
     const thisInstance = this;
-    const process = this._process;
+    const process = this.process;
     let moved = false;
     let interaction = false;
 
@@ -952,7 +1071,7 @@ export class zPhotoCarousel extends zPhotoZoom {
       }
     }
 
-    function mousemove(e: MouseEvent): void {
+    function mousemove(_e: MouseEvent): void {
       if (process.flags.isMoved || interaction) {
         moved = true;
       }
@@ -963,7 +1082,7 @@ export class zPhotoCarousel extends zPhotoZoom {
       if (((this === e.target) || !body) && !moved && interaction) {
         try {
           thisInstance.close();
-        } catch (e) {}
+        } catch (_err) {}
       }
       moved = false;
       interaction = false;

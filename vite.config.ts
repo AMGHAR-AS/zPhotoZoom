@@ -13,11 +13,11 @@ import { resolve } from 'path';
 export default defineConfig({
   build: {
     lib: {
-      // Entry point
-      entry: resolve(__dirname, 'src/zphotozoom.ts'),
+      // Entry point - includes both core and carousel
+      entry: resolve(__dirname, 'src/index.ts'),
 
-      // Library name (used in UMD build)
-      name: 'zPhotoZoom',
+      // Library name (used in UMD build) - exposes both classes
+      name: 'zPhotoZoomLib',
 
       // Output file names for different formats
       fileName: (format) => {

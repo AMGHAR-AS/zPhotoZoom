@@ -116,6 +116,14 @@ export interface SwipeDetectorOptions {
 }
 
 /**
+ * Image event manager interface (from parent zPhotoZoom)
+ */
+export interface ImageEventManager {
+  apply: () => void;
+  remove: () => void;
+}
+
+/**
  * Extended ImageData with carousel-specific properties
  */
 export interface ImageDataExtended {
@@ -127,6 +135,7 @@ export interface ImageDataExtended {
   height?: number;                     // Natural height
   prop?: number;                       // Aspect ratio (width/height)
   landscape?: boolean;                 // Is landscape orientation
+  evener?: ImageEventManager;          // Event manager (from parent)
   thumbnailSrc?: string;               // Thumbnail source (optional)
   index?: number;                      // Index in collection
 }

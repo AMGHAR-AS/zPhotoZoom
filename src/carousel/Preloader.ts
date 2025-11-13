@@ -29,10 +29,17 @@ export class Preloader implements IPreloader {
 
   constructor(options: PreloaderOptions) {
     this.options = options;
-    this.images = options.images;
+    this.images = options.images || [];
+
+    // Validate images array
+    if (!Array.isArray(this.images)) {
+      console.error('zPhotoCarousel: Preloader requires an array of images');
+      this.images = [];
+      return;
+    }
 
     // If preloadAll is enabled, start preloading immediately
-    if (this.options.preloadAll) {
+    if (this.options.preloadAll && this.images.length > 0) {
       this.preloadAll().catch(err => {
         console.warn('zPhotoCarousel: Error preloading all images:', err);
       });
@@ -104,6 +111,12 @@ export class Preloader implements IPreloader {
     }
 
     const totalImages = this.images.length;
+
+    // Validate index and images exist
+    if (totalImages === 0 || currentIndex < 0 || currentIndex >= totalImages) {
+      return Promise.resolve();
+    }
+
     const toPreload: number[] = [];
 
     // Next image
@@ -182,10 +195,13 @@ export class Preloader implements IPreloader {
    * Get loading statistics
    */
   public getStats(): { loaded: number; total: number; percentage: number } {
+    const total = this.images.length;
+    const loaded = this.loadedIndices.size;
+
     return {
-      loaded: this.loadedIndices.size,
-      total: this.images.length,
-      percentage: Math.round((this.loadedIndices.size / this.images.length) * 100)
+      loaded,
+      total,
+      percentage: total > 0 ? Math.round((loaded / total) * 100) : 0
     };
   }
 }
