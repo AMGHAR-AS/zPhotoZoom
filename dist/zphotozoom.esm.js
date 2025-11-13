@@ -1114,7 +1114,8 @@ class KeyboardNav {
       return;
     }
     const target = e.target;
-    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+    const interactiveElements = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];
+    if (interactiveElements.includes(target.tagName) || target.isContentEditable || target.closest('[contenteditable="true"]')) {
       return;
     }
     const action = KEYBOARD_MAPPINGS[e.key];
@@ -1193,7 +1194,7 @@ class Preloader {
       return this.waitForLoad(index);
     }
     this.loadingQueue.add(index);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         imageData.imageNode = img;
@@ -1206,10 +1207,14 @@ class Preloader {
         this.loadingQueue.delete(index);
         resolve();
       };
-      img.onerror = (error) => {
-        console.error(`zPhotoCarousel: Failed to load image at index ${index}:`, imageData.src);
+      img.onerror = () => {
+        console.warn(`zPhotoCarousel: Failed to load image at index ${index}:`, imageData.src);
+        imageData.imageNode = img;
+        imageData.loaded = true;
+        imageData.failed = true;
+        this.loadedIndices.add(index);
         this.loadingQueue.delete(index);
-        reject(error);
+        resolve();
       };
       img.src = imageData.src;
     });
@@ -1271,14 +1276,17 @@ class Preloader {
    */
   waitForLoad(index) {
     return new Promise((resolve) => {
+      let timeoutHandle;
       const checkInterval = setInterval(() => {
         if (!this.loadingQueue.has(index)) {
           clearInterval(checkInterval);
+          clearTimeout(timeoutHandle);
           resolve();
         }
       }, 50);
-      setTimeout(() => {
+      timeoutHandle = setTimeout(() => {
         clearInterval(checkInterval);
+        console.warn(`zPhotoCarousel: Preload timeout for image at index ${index}`);
         resolve();
       }, 1e4);
     });
@@ -1329,9 +1337,9 @@ class SwipeDetector {
     this.boundTouchStart = this.handleTouchStart.bind(this);
     this.boundTouchMove = this.handleTouchMove.bind(this);
     this.boundTouchEnd = this.handleTouchEnd.bind(this);
-    this.element.addEventListener("touchstart", this.boundTouchStart, { passive: true });
-    this.element.addEventListener("touchmove", this.boundTouchMove, { passive: true });
-    this.element.addEventListener("touchend", this.boundTouchEnd, { passive: true });
+    this.element.addEventListener("touchstart", this.boundTouchStart, { passive: false });
+    this.element.addEventListener("touchmove", this.boundTouchMove, { passive: false });
+    this.element.addEventListener("touchend", this.boundTouchEnd, { passive: false });
   }
   /**
    * Disable swipe detection
@@ -1552,9 +1560,12 @@ class ThumbnailBar {
     const containerWidth = this.container.offsetWidth;
     const thumbnailWidth = activeThumbnail.offsetWidth;
     const thumbnailLeft = activeThumbnail.offsetLeft;
+    const trackWidth = this.track.scrollWidth;
     const scrollPosition = thumbnailLeft - containerWidth / 2 + thumbnailWidth / 2;
+    const maxScroll = Math.max(0, trackWidth - containerWidth);
+    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
     this.track.style.transition = "transform 0.3s ease";
-    this.track.style.transform = `translateX(-${Math.max(0, scrollPosition)}px)`;
+    this.track.style.transform = `translateX(-${clampedScroll}px)`;
   }
   /**
    * Scroll vertically to center active thumbnail
@@ -1563,9 +1574,12 @@ class ThumbnailBar {
     const containerHeight = this.container.offsetHeight;
     const thumbnailHeight = activeThumbnail.offsetHeight;
     const thumbnailTop = activeThumbnail.offsetTop;
+    const trackHeight = this.track.scrollHeight;
     const scrollPosition = thumbnailTop - containerHeight / 2 + thumbnailHeight / 2;
+    const maxScroll = Math.max(0, trackHeight - containerHeight);
+    const clampedScroll = Math.max(0, Math.min(scrollPosition, maxScroll));
     this.track.style.transition = "transform 0.3s ease";
-    this.track.style.transform = `translateY(-${Math.max(0, scrollPosition)}px)`;
+    this.track.style.transform = `translateY(-${clampedScroll}px)`;
   }
   /**
    * Update the thumbnail bar with new images
@@ -2161,6 +2175,8 @@ class zPhotoCarousel extends zPhotoZoom {
     __publicField(this, "_mainImageContainer");
     __publicField(this, "_clickHandlers", /* @__PURE__ */ new Map());
     __publicField(this, "_hoverHandlers", null);
+    __publicField(this, "_activeTransitionController", null);
+    __publicField(this, "_originalEventHandlers", /* @__PURE__ */ new Map());
     this._carouselOptions = {
       ...options,
       carousel: options.carousel !== false,
@@ -2217,6 +2233,7 @@ class zPhotoCarousel extends zPhotoZoom {
     }
     this.process.images.forEach((img, index) => {
       if (img.evener) {
+        this._originalEventHandlers.set(img.node, { evener: img.evener });
         img.evener.remove();
       }
       const existingHandler = this._clickHandlers.get(img.node);
@@ -2368,10 +2385,20 @@ class zPhotoCarousel extends zPhotoZoom {
       this.updateCurrentImage(image);
       return;
     }
+    if (this._activeTransitionController) {
+      this._activeTransitionController.cancel();
+      this._activeTransitionController = null;
+    }
     const currentImageNode = this.process.currentImage.imageNode;
     const transitionFn = getTransition(this._carouselOptions.transition);
     const direction = this._carouselState.direction || "forward";
     this._carouselState.isTransitioning = true;
+    let transitionCancelled = false;
+    this._activeTransitionController = {
+      cancel: () => {
+        transitionCancelled = true;
+      }
+    };
     try {
       await transitionFn(
         currentImageNode,
@@ -2380,11 +2407,16 @@ class zPhotoCarousel extends zPhotoZoom {
         this._carouselOptions.transitionDuration,
         this._mainImageContainer
       );
+      if (!transitionCancelled) {
+        this.updateCurrentImage(image);
+      }
     } catch (error) {
-      console.error("zPhotoCarousel: Transition error:", error);
+      if (!transitionCancelled) {
+        console.error("zPhotoCarousel: Transition error:", error);
+      }
     } finally {
       this._carouselState.isTransitioning = false;
-      this.updateCurrentImage(image);
+      this._activeTransitionController = null;
     }
   }
   /**
@@ -2398,7 +2430,13 @@ class zPhotoCarousel extends zPhotoZoom {
       factor: 1,
       distanceFactor: 1,
       scale: 1,
-      origin: {},
+      origin: {
+        scale: 1,
+        min: this.process.scaleLimit.min,
+        max: this.process.scaleLimit.max,
+        x: 0,
+        y: 0
+      },
       center: { x: 0, y: 0 },
       minScale: this.process.scaleLimit.min,
       maxScale: this.process.scaleLimit.max,
@@ -2704,11 +2742,12 @@ class zPhotoCarousel extends zPhotoZoom {
       node.removeEventListener("click", handler);
     });
     this._clickHandlers.clear();
-    this.process.images.forEach((img) => {
-      if (img.evener) {
-        img.evener.apply();
+    this._originalEventHandlers.forEach((handlers, _node) => {
+      if (handlers.evener) {
+        handlers.evener.apply();
       }
     });
+    this._originalEventHandlers.clear();
   }
   /**
    * Get container preview with carousel support

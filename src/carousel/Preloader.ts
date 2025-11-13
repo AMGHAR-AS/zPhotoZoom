@@ -76,7 +76,7 @@ export class Preloader implements IPreloader {
     // Add to loading queue
     this.loadingQueue.add(index);
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const img = new Image();
 
       img.onload = () => {
@@ -92,10 +92,19 @@ export class Preloader implements IPreloader {
         resolve();
       };
 
-      img.onerror = (error) => {
-        console.error(`zPhotoCarousel: Failed to load image at index ${index}:`, imageData.src);
+      img.onerror = () => {
+        console.warn(`zPhotoCarousel: Failed to load image at index ${index}:`, imageData.src);
+
+        // Mark as loaded but failed to prevent blocking navigation
+        imageData.imageNode = img;  // Keep reference even if broken
+        imageData.loaded = true;    // Mark as "loaded" to unblock
+        (imageData as any).failed = true;  // Add failed flag for future handling
+
+        this.loadedIndices.add(index);
         this.loadingQueue.delete(index);
-        reject(error);
+
+        // Resolve instead of reject to allow navigation to continue
+        resolve();
       };
 
       img.src = imageData.src;
@@ -176,16 +185,20 @@ export class Preloader implements IPreloader {
    */
   private waitForLoad(index: number): Promise<void> {
     return new Promise((resolve) => {
+      let timeoutHandle: ReturnType<typeof setTimeout>;
+
       const checkInterval = setInterval(() => {
         if (!this.loadingQueue.has(index)) {
           clearInterval(checkInterval);
+          clearTimeout(timeoutHandle);
           resolve();
         }
       }, 50);
 
       // Timeout after 10 seconds
-      setTimeout(() => {
+      timeoutHandle = setTimeout(() => {
         clearInterval(checkInterval);
+        console.warn(`zPhotoCarousel: Preload timeout for image at index ${index}`);
         resolve();
       }, 10000);
     });

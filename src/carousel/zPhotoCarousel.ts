@@ -11,6 +11,7 @@ import type {
   CarouselOptions,
   CarouselState,
   ImageDataExtended,
+  ImageEventManager,
   NavigateEvent,
   SlideChangeEvent,
   NavigateEventCallback,
@@ -348,6 +349,12 @@ export class zPhotoCarousel extends zPhotoZoom {
   // Store hover handlers for pauseOnHover
   private _hoverHandlers: { mouseenter: () => void; mouseleave: () => void } | null = null;
 
+  // Store active transition for cancellation
+  private _activeTransitionController: { cancel: () => void } | null = null;
+
+  // Store original event handlers from parent for restoration
+  private _originalEventHandlers: Map<HTMLElement, { evener: ImageEventManager }> = new Map();
+
   // Helper to access parent's private _process (type assertion)
   private get process(): any {
     return (this as any)._process;
@@ -423,8 +430,9 @@ export class zPhotoCarousel extends zPhotoZoom {
 
     // Override image click handlers to open in carousel mode
     this.process.images.forEach((img: ImageDataExtended, index: number) => {
-      // First, remove parent's default event handlers
+      // Store original event handler before removing it
       if (img.evener) {
+        this._originalEventHandlers.set(img.node, { evener: img.evener });
         img.evener.remove();
       }
 
@@ -622,12 +630,26 @@ export class zPhotoCarousel extends zPhotoZoom {
       return;
     }
 
+    // Cancel any ongoing transition
+    if (this._activeTransitionController) {
+      this._activeTransitionController.cancel();
+      this._activeTransitionController = null;
+    }
+
     // Perform transition
     const currentImageNode = this.process.currentImage.imageNode;
     const transitionFn = getTransition(this._carouselOptions.transition);
     const direction = this._carouselState.direction || 'forward';
 
     this._carouselState.isTransitioning = true;
+
+    // Create cancellable transition
+    let transitionCancelled = false;
+    this._activeTransitionController = {
+      cancel: () => {
+        transitionCancelled = true;
+      }
+    };
 
     try {
       await transitionFn(
@@ -637,11 +659,18 @@ export class zPhotoCarousel extends zPhotoZoom {
         this._carouselOptions.transitionDuration,
         this._mainImageContainer!
       );
+
+      // Only update if transition wasn't cancelled
+      if (!transitionCancelled) {
+        this.updateCurrentImage(image);
+      }
     } catch (error) {
-      console.error('zPhotoCarousel: Transition error:', error);
+      if (!transitionCancelled) {
+        console.error('zPhotoCarousel: Transition error:', error);
+      }
     } finally {
       this._carouselState.isTransitioning = false;
-      this.updateCurrentImage(image);
+      this._activeTransitionController = null;
     }
   }
 
@@ -650,6 +679,7 @@ export class zPhotoCarousel extends zPhotoZoom {
    */
   private updateCurrentImage(image: ImageDataExtended): void {
     // Update process.currentImage to maintain compatibility with parent
+    // Initialize with proper origin structure for zoom functionality
     this.process.currentImage = {
       image: image,
       imageNode: image.imageNode!,
@@ -657,7 +687,13 @@ export class zPhotoCarousel extends zPhotoZoom {
       factor: 1,
       distanceFactor: 1,
       scale: 1,
-      origin: {} as any,
+      origin: {
+        scale: 1,
+        min: this.process.scaleLimit.min,
+        max: this.process.scaleLimit.max,
+        x: 0,
+        y: 0
+      },
       center: { x: 0, y: 0 },
       minScale: this.process.scaleLimit.min,
       maxScale: this.process.scaleLimit.max,
@@ -1045,12 +1081,13 @@ export class zPhotoCarousel extends zPhotoZoom {
     });
     this._clickHandlers.clear();
 
-    // Restore parent's event handlers
-    this.process.images.forEach((img: ImageDataExtended) => {
-      if (img.evener) {
-        img.evener.apply();
+    // Restore parent's original event handlers from our saved copy
+    this._originalEventHandlers.forEach((handlers, _node) => {
+      if (handlers.evener) {
+        handlers.evener.apply();
       }
     });
+    this._originalEventHandlers.clear();
   }
 
   /**

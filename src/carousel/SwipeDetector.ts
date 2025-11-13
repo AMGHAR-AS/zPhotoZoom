@@ -62,9 +62,10 @@ export class SwipeDetector implements ISwipeDetector {
     this.boundTouchMove = this.handleTouchMove.bind(this);
     this.boundTouchEnd = this.handleTouchEnd.bind(this);
 
-    this.element.addEventListener('touchstart', this.boundTouchStart, { passive: true });
-    this.element.addEventListener('touchmove', this.boundTouchMove, { passive: true });
-    this.element.addEventListener('touchend', this.boundTouchEnd, { passive: true });
+    // Use passive: false to allow preventDefault() when needed
+    this.element.addEventListener('touchstart', this.boundTouchStart, { passive: false });
+    this.element.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+    this.element.addEventListener('touchend', this.boundTouchEnd, { passive: false });
   }
 
   /**

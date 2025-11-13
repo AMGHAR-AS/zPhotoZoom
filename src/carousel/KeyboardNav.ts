@@ -89,12 +89,14 @@ export class KeyboardNav implements IKeyboardNav {
       return;
     }
 
-    // Check if user is typing in an input/textarea
+    // Check if user is interacting with form elements or editable content
     const target = e.target as HTMLElement;
+    const interactiveElements = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
+
     if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      target.isContentEditable
+      interactiveElements.includes(target.tagName) ||
+      target.isContentEditable ||
+      target.closest('[contenteditable="true"]')
     ) {
       return;
     }
