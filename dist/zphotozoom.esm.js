@@ -2296,9 +2296,13 @@ class zPhotoCarousel extends zPhotoZoom {
     }
     const container = this.process.preview.container;
     container.classList.add("zpz-carousel-mode");
-    this._mainImageContainer = document.createElement("div");
-    this._mainImageContainer.className = "zpz-main-image-container";
-    container.appendChild(this._mainImageContainer);
+    if (!this._mainImageContainer || !this._mainImageContainer.parentNode) {
+      this._mainImageContainer = document.createElement("div");
+      this._mainImageContainer.className = "zpz-main-image-container";
+      container.appendChild(this._mainImageContainer);
+    } else {
+      this._mainImageContainer.innerHTML = "";
+    }
   }
   /**
    * Setup carousel UI components
@@ -2387,6 +2391,10 @@ class zPhotoCarousel extends zPhotoZoom {
     }
     if (this._activeTransitionController) {
       this._activeTransitionController.cancel();
+      if (this._activeTransitionController.timeoutId) {
+        clearTimeout(this._activeTransitionController.timeoutId);
+      }
+      this._carouselState.isTransitioning = false;
       this._activeTransitionController = null;
     }
     const currentImageNode = this.process.currentImage.imageNode;
@@ -2407,6 +2415,10 @@ class zPhotoCarousel extends zPhotoZoom {
         this._carouselOptions.transitionDuration,
         this._mainImageContainer
       );
+      const timeoutId = imageNode.__transitionTimeoutId;
+      if (timeoutId && this._activeTransitionController) {
+        this._activeTransitionController.timeoutId = timeoutId;
+      }
       if (!transitionCancelled) {
         this.updateCurrentImage(image);
       }
@@ -2420,31 +2432,89 @@ class zPhotoCarousel extends zPhotoZoom {
     }
   }
   /**
+   * Calculate optimal image positioning (same logic as parent's centerImage)
+   */
+  calculateImageOrigin(image) {
+    const container = this._mainImageContainer;
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    const containerProp = containerWidth / containerHeight;
+    let newWidth, newHeight;
+    if (image.landscape) {
+      newWidth = 8 * containerWidth / 10;
+      newHeight = newWidth / image.prop;
+      if (newHeight > containerHeight) {
+        newHeight = 9 * containerHeight / 10;
+        newWidth = newHeight * image.prop;
+      }
+    } else {
+      if (containerProp >= image.prop) {
+        newHeight = 9 * containerHeight / 10;
+        newWidth = newHeight * image.prop;
+      } else {
+        const tmp = image.prop - containerProp;
+        newHeight = 9 * containerHeight / 10 - 8 * containerHeight / 10 * tmp;
+        newWidth = newHeight * image.prop;
+      }
+    }
+    let scale = Math.min(newWidth / image.width, newHeight / image.height);
+    let min = this.process.scaleLimit.min;
+    let max = this.process.scaleLimit.max;
+    if (typeof min !== "number" || min <= 0) {
+      min = 0.3;
+      if (scale < min) {
+        min = scale;
+      }
+    } else if (scale < min) {
+      scale = min;
+    }
+    if (typeof max !== "number" || max < min) {
+      max = 5;
+      if (scale > max) {
+        max = scale;
+        scale = 3;
+      }
+    } else if (scale > max) {
+      scale = max;
+    }
+    return {
+      width: newWidth,
+      height: newHeight,
+      x: (containerWidth - newWidth) / 2,
+      y: (containerHeight - newHeight) / 2,
+      scale,
+      min,
+      max
+    };
+  }
+  /**
    * Update current image reference
    */
   updateCurrentImage(image) {
+    const nf = this.calculateImageOrigin(image);
+    const container = this._mainImageContainer;
+    const containerRect = container.getBoundingClientRect();
     this.process.currentImage = {
       image,
       imageNode: image.imageNode,
       animate: false,
-      factor: 1,
+      factor: nf.scale,
       distanceFactor: 1,
-      scale: 1,
-      origin: {
-        scale: 1,
-        min: this.process.scaleLimit.min,
-        max: this.process.scaleLimit.max,
-        x: 0,
-        y: 0
+      scale: nf.scale,
+      origin: nf,
+      center: {
+        x: containerRect.left + containerRect.width / 2,
+        y: containerRect.top + containerRect.height / 2
       },
-      center: { x: 0, y: 0 },
-      minScale: this.process.scaleLimit.min,
-      maxScale: this.process.scaleLimit.max,
-      x: 0,
-      y: 0,
+      minScale: nf.min,
+      maxScale: nf.max,
+      x: nf.x / nf.scale,
+      y: nf.y / nf.scale,
       width: () => image.imageNode.offsetWidth,
       height: () => image.imageNode.offsetHeight
     };
+    const imageNode = image.imageNode;
+    imageNode.style.transform = `translate3d(${nf.x}px, ${nf.y}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
   }
   // ========================================================================
   // Public Navigation API
@@ -2726,12 +2796,20 @@ class zPhotoCarousel extends zPhotoZoom {
   close() {
     this.pause();
     this._thumbnailBar?.destroy();
+    this._thumbnailBar = void 0;
     this._keyboardNav?.destroy();
+    this._keyboardNav = void 0;
     this._swipeDetector?.destroy();
+    this._swipeDetector = void 0;
     this._navigationArrows?.destroy();
+    this._navigationArrows = void 0;
     this._counter?.destroy();
+    this._counter = void 0;
     this.cleanupClickHandlers();
     this.cleanupPauseOnHover();
+    if (this._mainImageContainer) {
+      this._mainImageContainer.innerHTML = "";
+    }
     super.close();
   }
   /**

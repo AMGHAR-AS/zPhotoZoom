@@ -350,7 +350,10 @@ export class zPhotoCarousel extends zPhotoZoom {
   private _hoverHandlers: { mouseenter: () => void; mouseleave: () => void } | null = null;
 
   // Store active transition for cancellation
-  private _activeTransitionController: { cancel: () => void } | null = null;
+  private _activeTransitionController: {
+    cancel: () => void;
+    timeoutId?: ReturnType<typeof setTimeout>;
+  } | null = null;
 
   // Store original event handlers from parent for restoration
   private _originalEventHandlers: Map<HTMLElement, { evener: ImageEventManager }> = new Map();
@@ -518,10 +521,15 @@ export class zPhotoCarousel extends zPhotoZoom {
     const container = (this.process.preview as any).container;
     container.classList.add('zpz-carousel-mode');
 
-    // Create main image container
-    this._mainImageContainer = document.createElement('div');
-    this._mainImageContainer.className = 'zpz-main-image-container';
-    container.appendChild(this._mainImageContainer);
+    // Create or reuse main image container
+    if (!this._mainImageContainer || !this._mainImageContainer.parentNode) {
+      this._mainImageContainer = document.createElement('div');
+      this._mainImageContainer.className = 'zpz-main-image-container';
+      container.appendChild(this._mainImageContainer);
+    } else {
+      // Clear existing content if reusing
+      this._mainImageContainer.innerHTML = '';
+    }
   }
 
   /**
@@ -633,6 +641,11 @@ export class zPhotoCarousel extends zPhotoZoom {
     // Cancel any ongoing transition
     if (this._activeTransitionController) {
       this._activeTransitionController.cancel();
+      // Clear the timeout if it exists
+      if (this._activeTransitionController.timeoutId) {
+        clearTimeout(this._activeTransitionController.timeoutId);
+      }
+      this._carouselState.isTransitioning = false;
       this._activeTransitionController = null;
     }
 
@@ -660,6 +673,12 @@ export class zPhotoCarousel extends zPhotoZoom {
         this._mainImageContainer!
       );
 
+      // Extract timeout ID from the element (set by transition functions)
+      const timeoutId = (imageNode as any).__transitionTimeoutId;
+      if (timeoutId && this._activeTransitionController) {
+        this._activeTransitionController.timeoutId = timeoutId;
+      }
+
       // Only update if transition wasn't cancelled
       if (!transitionCancelled) {
         this.updateCurrentImage(image);
@@ -675,33 +694,102 @@ export class zPhotoCarousel extends zPhotoZoom {
   }
 
   /**
+   * Calculate optimal image positioning (same logic as parent's centerImage)
+   */
+  private calculateImageOrigin(image: ImageDataExtended): any {
+    const container = this._mainImageContainer!;
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    const containerProp = containerWidth / containerHeight;
+
+    let newWidth: number, newHeight: number;
+
+    if (image.landscape) {
+      newWidth = (8 * containerWidth / 10);
+      newHeight = newWidth / image.prop!;
+      if (newHeight > containerHeight) {
+        newHeight = (9 * containerHeight / 10);
+        newWidth = newHeight * image.prop!;
+      }
+    } else {
+      if (containerProp >= image.prop!) {
+        newHeight = (9 * containerHeight / 10);
+        newWidth = newHeight * image.prop!;
+      } else {
+        const tmp = image.prop! - containerProp;
+        newHeight = (9 * containerHeight / 10) - (8 * containerHeight / 10) * tmp;
+        newWidth = newHeight * image.prop!;
+      }
+    }
+
+    let scale = Math.min(newWidth / image.width!, newHeight / image.height!);
+    let min = this.process.scaleLimit.min;
+    let max = this.process.scaleLimit.max;
+
+    if (typeof min !== 'number' || min <= 0) {
+      min = 0.3;
+      if (scale < min) {
+        min = scale;
+      }
+    } else if (scale < min) {
+      scale = min;
+    }
+
+    if (typeof max !== 'number' || max < min) {
+      max = 5;
+      if (scale > max) {
+        max = scale;
+        scale = 3;
+      }
+    } else if (scale > max) {
+      scale = max;
+    }
+
+    return {
+      width: newWidth,
+      height: newHeight,
+      x: (containerWidth - newWidth) / 2,
+      y: (containerHeight - newHeight) / 2,
+      scale: scale,
+      min: min,
+      max: max
+    };
+  }
+
+  /**
    * Update current image reference
    */
   private updateCurrentImage(image: ImageDataExtended): void {
+    // Calculate optimal image positioning
+    const nf = this.calculateImageOrigin(image);
+    const container = this._mainImageContainer!;
+    const containerRect = container.getBoundingClientRect();
+
     // Update process.currentImage to maintain compatibility with parent
     // Initialize with proper origin structure for zoom functionality
     this.process.currentImage = {
       image: image,
       imageNode: image.imageNode!,
       animate: false,
-      factor: 1,
+      factor: nf.scale,
       distanceFactor: 1,
-      scale: 1,
-      origin: {
-        scale: 1,
-        min: this.process.scaleLimit.min,
-        max: this.process.scaleLimit.max,
-        x: 0,
-        y: 0
+      scale: nf.scale,
+      origin: nf,
+      center: {
+        x: containerRect.left + containerRect.width / 2,
+        y: containerRect.top + containerRect.height / 2
       },
-      center: { x: 0, y: 0 },
-      minScale: this.process.scaleLimit.min,
-      maxScale: this.process.scaleLimit.max,
-      x: 0,
-      y: 0,
+      minScale: nf.min,
+      maxScale: nf.max,
+      x: nf.x / nf.scale,
+      y: nf.y / nf.scale,
       width: () => image.imageNode!.offsetWidth,
       height: () => image.imageNode!.offsetHeight
     };
+
+    // Apply the zoom transform to the image
+    const imageNode = image.imageNode!;
+    imageNode.style.transform = `translate3d(${nf.x}px, ${nf.y}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
   }
 
   // ========================================================================
@@ -1058,14 +1146,29 @@ export class zPhotoCarousel extends zPhotoZoom {
 
     // Destroy components
     this._thumbnailBar?.destroy();
+    this._thumbnailBar = undefined;
+
     this._keyboardNav?.destroy();
+    this._keyboardNav = undefined;
+
     this._swipeDetector?.destroy();
+    this._swipeDetector = undefined;
+
     this._navigationArrows?.destroy();
+    this._navigationArrows = undefined;
+
     this._counter?.destroy();
+    this._counter = undefined;
 
     // Clean up event handlers
     this.cleanupClickHandlers();
     this.cleanupPauseOnHover();
+
+    // Clean up main image container
+    if (this._mainImageContainer) {
+      this._mainImageContainer.innerHTML = '';
+      // Don't remove from DOM as it will be reused or cleaned by parent
+    }
 
     // Call parent close
     super.close();
