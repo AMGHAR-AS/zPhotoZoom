@@ -6,6 +6,26 @@
 
 A modern, feature-rich TypeScript library for creating interactive image zoom viewers with seamless touch and mouse support. Includes an optional carousel/gallery extension for multi-image navigation with thumbnails.
 
+## 📚 Table of Contents
+
+- [Demo](#-demo)
+- [Features](#-features)
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [API Documentation](#-api-documentation)
+- [Usage Examples](#-usage-examples)
+- [Advanced Configuration](#-advanced-configuration)
+- [Browser Support](#-browser-support)
+- [Comprehensive Documentation](#-comprehensive-documentation)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Support & Community](#-support--community)
+- [Roadmap](#️-roadmap)
+
+## 🎯 Demo
+
+Check out the live demo: [View Demo](https://amghar-as.github.io/zPhotoZoom/)
+
 ## ✨ Features
 
 ### Core Features
@@ -373,6 +393,49 @@ const fullsizeViewer = new zPhotoZoom({
 | iOS Safari | 12+ |
 | Chrome Android | Last 2 versions |
 
+## 📚 Comprehensive Documentation
+
+For detailed documentation, examples, and guides, visit our [documentation folder](./docs):
+
+- **[Getting Started](./docs/getting-started.md)** - Installation, basic usage, controls, and troubleshooting
+- **[Core API Reference](./docs/core-api.md)** - Complete API documentation for the base viewer
+- **[Carousel API Reference](./docs/carousel-api.md)** - Multi-image navigation and carousel features
+- **[Plugin System](./docs/plugin-system.md)** - Create custom plugins to extend functionality
+- **[Usage Examples](./docs/examples.md)** - Comprehensive code examples for common use cases
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. **Report Bugs** - [Open an issue](https://github.com/AMGHAR-AS/zPhotoZoom/issues) with detailed information
+2. **Suggest Features** - Share your ideas through issues
+3. **Submit Pull Requests** - Fork, create a feature branch, and submit a PR
+4. **Improve Documentation** - Help make the docs better
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/AMGHAR-AS/zPhotoZoom.git
+
+# Install dependencies
+cd zPhotoZoom
+npm install
+
+# Run tests
+npm test
+
+# Build the project
+npm run build
+```
+
+### Guidelines
+
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation for API changes
+- Keep commits clear and descriptive
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -381,6 +444,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Inspired by Google Picasa style
 - Built with TypeScript and modern web standards
+
+## 💬 Support & Community
+
+- **Issues**: [GitHub Issues](https://github.com/AMGHAR-AS/zPhotoZoom/issues) - Report bugs or request features
+- **Discussions**: [GitHub Discussions](https://github.com/AMGHAR-AS/zPhotoZoom/discussions) - Ask questions and share ideas
+- **NPM Package**: [npmjs.com/package/zphotozoom](https://www.npmjs.com/package/zphotozoom)
 
 ## 🗺️ Roadmap
 
