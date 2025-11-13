@@ -2293,6 +2293,7 @@ class zPhotoCarousel extends zPhotoZoom {
       const containerPreview = this.getContainerPreview();
       this.process.preview = containerPreview;
       this.process.preview.apply();
+      this.process.preview.evener();
     }
     const container = this.process.preview.container;
     container.classList.add("zpz-carousel-mode");
@@ -2488,12 +2489,16 @@ class zPhotoCarousel extends zPhotoZoom {
     };
   }
   /**
-   * Update current image reference
+   * Update current image reference and apply zoom
    */
   updateCurrentImage(image) {
     const nf = this.calculateImageOrigin(image);
     const container = this._mainImageContainer;
     const containerRect = container.getBoundingClientRect();
+    this.updateScaleImage(nf.scale, {
+      x: nf.x / nf.scale,
+      y: nf.y / nf.scale
+    });
     this.process.currentImage = {
       image,
       imageNode: image.imageNode,
@@ -2508,13 +2513,16 @@ class zPhotoCarousel extends zPhotoZoom {
       },
       minScale: nf.min,
       maxScale: nf.max,
-      x: nf.x / nf.scale,
-      y: nf.y / nf.scale,
-      width: () => image.imageNode.offsetWidth,
-      height: () => image.imageNode.offsetHeight
+      x: nf.x,
+      // Raw values, not divided by scale
+      y: nf.y,
+      // Raw values, not divided by scale
+      width: () => this.process.currentImage.imageNode.offsetWidth,
+      height: () => this.process.currentImage.imageNode.offsetHeight
     };
-    const imageNode = image.imageNode;
-    imageNode.style.transform = `translate3d(${nf.x}px, ${nf.y}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
+    if (image.loaded && image.evener) {
+      image.evener.apply();
+    }
   }
   // ========================================================================
   // Public Navigation API

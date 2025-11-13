@@ -516,6 +516,8 @@ export class zPhotoCarousel extends zPhotoZoom {
       const containerPreview = this.getContainerPreview();
       this.process.preview = containerPreview;
       this.process.preview.apply();
+      // CRITICAL: Call evener() to activate zoom events (wheel, mousedown, etc.)
+      this.process.preview.evener();
     }
 
     const container = (this.process.preview as any).container;
@@ -757,7 +759,7 @@ export class zPhotoCarousel extends zPhotoZoom {
   }
 
   /**
-   * Update current image reference
+   * Update current image reference and apply zoom
    */
   private updateCurrentImage(image: ImageDataExtended): void {
     // Calculate optimal image positioning
@@ -765,8 +767,14 @@ export class zPhotoCarousel extends zPhotoZoom {
     const container = this._mainImageContainer!;
     const containerRect = container.getBoundingClientRect();
 
-    // Update process.currentImage to maintain compatibility with parent
-    // Initialize with proper origin structure for zoom functionality
+    // Use parent's updateScaleImage to properly apply transform
+    // This is CRITICAL for zoom to work correctly
+    (this as any).updateScaleImage(nf.scale, {
+      x: nf.x / nf.scale,
+      y: nf.y / nf.scale
+    });
+
+    // Update process.currentImage with correct structure (matching parent exactly)
     this.process.currentImage = {
       image: image,
       imageNode: image.imageNode!,
@@ -781,15 +789,16 @@ export class zPhotoCarousel extends zPhotoZoom {
       },
       minScale: nf.min,
       maxScale: nf.max,
-      x: nf.x / nf.scale,
-      y: nf.y / nf.scale,
-      width: () => image.imageNode!.offsetWidth,
-      height: () => image.imageNode!.offsetHeight
+      x: nf.x,  // Raw values, not divided by scale
+      y: nf.y,  // Raw values, not divided by scale
+      width: () => this.process.currentImage!.imageNode.offsetWidth,
+      height: () => this.process.currentImage!.imageNode.offsetHeight
     };
 
-    // Apply the zoom transform to the image
-    const imageNode = image.imageNode!;
-    imageNode.style.transform = `translate3d(${nf.x}px, ${nf.y}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
+    // Apply image-specific events if image is loaded
+    if (image.loaded && image.evener) {
+      image.evener.apply();
+    }
   }
 
   // ========================================================================
