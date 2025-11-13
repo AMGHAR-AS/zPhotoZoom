@@ -1246,6 +1246,10 @@ class zPhotoZoom {
       }
     }
     process.currentImage.origin = nf;
+    process.currentImage.center = {
+      x: container.cx,
+      y: container.cy
+    };
     this.setImageTransform(nf.scale, nf.x, nf.y, false);
   }
   /**

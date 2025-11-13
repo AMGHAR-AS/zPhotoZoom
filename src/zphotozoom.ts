@@ -1655,6 +1655,13 @@ class zPhotoZoom {
     // Update origin
     process.currentImage.origin = nf;
 
+    // Update center to use the modified container's center
+    // This ensures the image uses the correct center point that accounts for reserved spaces and margins
+    process.currentImage.center = {
+      x: container.cx,
+      y: container.cy
+    };
+
     // Apply transform
     this.setImageTransform(nf.scale, nf.x, nf.y, false);
   }
