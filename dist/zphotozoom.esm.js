@@ -2495,13 +2495,13 @@ class zPhotoCarousel extends zPhotoZoom {
     const nf = this.calculateImageOrigin(image);
     const container = this._mainImageContainer;
     const containerRect = container.getBoundingClientRect();
-    this.updateScaleImage(nf.scale, {
-      x: nf.x / nf.scale,
-      y: nf.y / nf.scale
-    });
+    const imageNode = image.imageNode;
+    const translateX = nf.x / nf.scale;
+    const translateY = nf.y / nf.scale;
+    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
     this.process.currentImage = {
       image,
-      imageNode: image.imageNode,
+      imageNode,
       animate: false,
       factor: nf.scale,
       distanceFactor: 1,
@@ -2514,9 +2514,9 @@ class zPhotoCarousel extends zPhotoZoom {
       minScale: nf.min,
       maxScale: nf.max,
       x: nf.x,
-      // Raw values, not divided by scale
+      // Raw values (not divided by scale) - parent does same at line 579
       y: nf.y,
-      // Raw values, not divided by scale
+      // Raw values (not divided by scale) - parent does same at line 580
       width: () => this.process.currentImage.imageNode.offsetWidth,
       height: () => this.process.currentImage.imageNode.offsetHeight
     };

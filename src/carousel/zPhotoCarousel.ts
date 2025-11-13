@@ -767,17 +767,19 @@ export class zPhotoCarousel extends zPhotoZoom {
     const container = this._mainImageContainer!;
     const containerRect = container.getBoundingClientRect();
 
-    // Use parent's updateScaleImage to properly apply transform
-    // This is CRITICAL for zoom to work correctly
-    (this as any).updateScaleImage(nf.scale, {
-      x: nf.x / nf.scale,
-      y: nf.y / nf.scale
-    });
+    const imageNode = image.imageNode!;
+
+    // Apply transform manually (parent's updateScaleImage is not accessible)
+    // Use same logic as parent: translate by (x/scale, y/scale) and scale by factor
+    const translateX = nf.x / nf.scale;
+    const translateY = nf.y / nf.scale;
+    imageNode.style.transform = `translate3d(${translateX}px, ${translateY}px, 0px) scale3d(${nf.scale}, ${nf.scale}, 1)`;
 
     // Update process.currentImage with correct structure (matching parent exactly)
+    // Structure from zphotozoom.ts openViewer function (lines 565-587)
     this.process.currentImage = {
       image: image,
-      imageNode: image.imageNode!,
+      imageNode: imageNode,
       animate: false,
       factor: nf.scale,
       distanceFactor: 1,
@@ -789,8 +791,8 @@ export class zPhotoCarousel extends zPhotoZoom {
       },
       minScale: nf.min,
       maxScale: nf.max,
-      x: nf.x,  // Raw values, not divided by scale
-      y: nf.y,  // Raw values, not divided by scale
+      x: nf.x,  // Raw values (not divided by scale) - parent does same at line 579
+      y: nf.y,  // Raw values (not divided by scale) - parent does same at line 580
       width: () => this.process.currentImage!.imageNode.offsetWidth,
       height: () => this.process.currentImage!.imageNode.offsetHeight
     };
